@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JupyterPersistentConnectionParameters">
+    <option name="moduleParameters">
+      <map>
+        <entry key="/private/var/folders/kj/n2gcn4b13tz_w4kds72bsfgh0000gp/T/Discrete &amp; Multilevel Models V1.ipynb/.idea/Discrete &amp; Multilevel Models V1.ipynb.iml">
+          <value>
+            <JupyterConnectionParameters>
+              <option name="managed" value="true" />
+              <option name="sdkHomePath" value="$USER_HOME$/.conda/envs/Discrete &amp; Multilevel Models V1.ipynb/bin/python" />
+            </JupyterConnectionParameters>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
