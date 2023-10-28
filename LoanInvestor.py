@@ -1,0 +1,116 @@
+import numpy as np
+import uuid
+
+class LoanInvestor:
+    def __init__(self, trader=None, capital=None, min_capital=0.15):
+        self.id = 'I' + str(uuid.uuid4())
+        self.capital = capital if capital else self.generate_initial_capital()
+        self.min_capital = min_capital
+        self.capital_history = []
+        self.target_score = np.abs(np.random.normal(1.1, 0.2))
+        self.loan_fair_values = []
+        self.portfolio_values = []
+        self.portfolio = []
+        self.matured_loans = []
+        self.current_score = 0
+        self.trader = trader
+        self.interest_received = []
+
+        # adding in trading logic
+        self.loans_for_sale = []
+
+    def generate_initial_capital(self):
+        random_capital = np.round((np.random.pareto(2, 1) + 1) * 50 * 1000000, 0)[0]
+        return random_capital
+
+    def initialize_portfolio(self, available_loans, capital_threshold=0.1):
+
+        """
+        Initializes the investor's portfolio with available loans.
+        :param available_loans: List of available loans already prepared by the loanMarket class.
+        :param capital_threshold: Maximum proportion of capital to be invested.
+        """
+
+        np.random.shuffle(available_loans)
+        total_investment = 0
+        for loan in available_loans:
+            purchase_value = (loan.market_price / 100) * loan.size
+            if total_investment + purchase_value <= self.capital * (capital_threshold + self.min_capital):
+                total_investment += purchase_value
+                loan.update_owner(self.id)
+                self.portfolio.append(loan)
+            else:
+                break
+
+        self.capital -= total_investment
+        self.calculate_current_score()
+        self.loan_fair_values.append(np.sum([(loan.fair_value * (loan.size / 100)) for loan in self.portfolio]))
+        self.portfolio_values.append(self.loan_fair_values[-1] + self.capital)
+        self.capital_history.append(self.capital)
+
+    def calculate_value(self):
+        self.loan_fair_values.append(np.sum([((loan.fair_value / 100) * loan.size) for loan in self.portfolio]))
+        self.portfolio_values.append(self.loan_fair_values[-1] + self.capital)
+        self.capital_history.append(self.capital)
+
+    def calculate_current_score(self):
+        weighted_interest = sum([loan.interest_rate * loan.size for loan in self.portfolio])
+        weighted_pd = sum([loan.pd * loan.size for loan in self.portfolio])
+        total_size = sum([loan.size for loan in self.portfolio])
+        self.current_score = (weighted_interest / total_size) / (
+                    weighted_pd / total_size) if weighted_interest > 0 else 0
+
+    def receive_interest(self, float_interest=0):
+        '''
+        This is the procedure every cycle for the investor to receive interest on their loans.
+        :param float_interest: The floating base rate for interest (think SOFR)
+        '''
+        total_interest = 0
+        for loan in self.portfolio:
+            if loan.maturity_bool == True:
+                self.capital += (loan.fair_value / 100) * loan.size
+                self.matured_loans.append(loan)
+                self.portfolio.remove(loan)
+            else:
+                total_interest += loan.size * ((loan.interest_rate + float_interest)) / 12
+
+        self.capital += total_interest
+        self.interest_received.append(total_interest)
+
+    def get_loan_to_sell(self, num_select=3):
+        # process to find the top loans that contribute to PD in the wrong direction in terms of absolute value
+        # returns the top loan to sell which would be passed to their trader
+
+        # start by sorting the portfolio by PD
+        sorted_portfolio = sorted(self.portfolio, key=lambda x: x.pd / x.interest_rate, reverse=True)
+
+        # finding out what the wrong direction is by comparing current pd to target pd
+        wrong_direction = self.current_score > self.target_score
+
+        # if the current score is less than the target score, then the wrong direction is positive, meaning we should sell the highest score loans
+        # if the current score is greater than the target score, then the wrong direction is negative, meaning we should sell the lowest score loans
+        if wrong_direction:
+            top_wrong_direction = sorted_portfolio[:num_select]
+        else:
+            top_wrong_direction = sorted_portfolio[-num_select:]
+
+        loan_to_sell = np.random.choice(top_wrong_direction)
+        self.loans_for_sale.append(loan_to_sell)
+
+        return loan_to_sell
+
+    def get_bid_price(self, loan):
+        # takes a loan as an input and returns a bid price for the investor
+        # breaks if the investor can't purchase the loan
+
+        # start by calculating the total interest received from the loan
+        proj_interest = loan.interest_rate / 12 * loan.time_to_maturity
+
+        bid_price = proj_interest + 100 - ((loan.pd * loan.time_to_maturity) / self.target_score)
+
+        return bid_price
+
+    def update(self, float_interest=0, cycle=None):
+        self.receive_interest(float_interest)
+        self.calculate_value()
+        self.calculate_current_score()
