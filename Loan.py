@@ -146,3 +146,6 @@ class Loan:
                 self.market_price = 100  # Set to par value
         self.fair_value_history.append(self.fair_value)
 
+    def as_dict(self):
+        return {slot: getattr(self, slot, None) for slot in self.__slots__}
+

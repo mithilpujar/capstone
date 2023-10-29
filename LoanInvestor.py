@@ -1,13 +1,24 @@
-import numpy as np
 import uuid
+
+import numpy as np
+
 
 class LoanInvestor:
     def __init__(self, trader=None, capital=None, min_capital=0.15):
+        """
+        Initializes the LoanInvestor object with given or default parameters.
+
+        Parameters:
+        - trader (optional): An instance representing the trader for the investor.
+        - capital (optional): Initial capital for the investor. If not provided, it's generated randomly.
+        - min_capital (float, optional): Minimum capital that the investor should hold. Defaults to 0.15.
+        """
+
         self.id = 'I' + str(uuid.uuid4())
         self.capital = capital if capital else self.generate_initial_capital()
         self.min_capital = min_capital
         self.capital_history = []
-        self.target_score = np.abs(np.random.normal(1.1, 0.2))
+        self.target_score = np.abs(np.random.normal(0.32, 0.1))
         self.loan_fair_values = []
         self.portfolio_values = []
         self.portfolio = []
@@ -20,6 +31,13 @@ class LoanInvestor:
         self.loans_for_sale = []
 
     def generate_initial_capital(self):
+        """
+        Generates a random initial capital for the investor using a Pareto distribution.
+
+        Returns:
+        float: Initial capital.
+        """
+
         random_capital = np.round((np.random.pareto(2, 1) + 1) * 50 * 1000000, 0)[0]
         return random_capital
 
@@ -58,7 +76,7 @@ class LoanInvestor:
         weighted_pd = sum([loan.pd * loan.size for loan in self.portfolio])
         total_size = sum([loan.size for loan in self.portfolio])
         self.current_score = (weighted_interest / total_size) / (
-                    weighted_pd / total_size) if weighted_interest > 0 else 0
+                weighted_pd / total_size) if weighted_interest > 0 else 0
 
     def receive_interest(self, float_interest=0):
         '''
@@ -99,18 +117,42 @@ class LoanInvestor:
 
         return loan_to_sell
 
-    def get_bid_price(self, loan):
-        # takes a loan as an input and returns a bid price for the investor
-        # breaks if the investor can't purchase the loan
+    def get_bid_price(self, loan, pricing_method = 'portfolio_neutral'):
+        # use portfolio neutral pricing for the bid price
 
-        # start by calculating the total interest received from the loan
-        proj_interest = loan.interest_rate / 12 * loan.time_to_maturity
+        if pricing_method == 'portfolio_neutral':
+            # takes a loan as an input and returns a bid price for the investor
+            # breaks if the investor can't purchase the loan
+            # start by calculating the total interest received from the loan
+            proj_interest = loan.interest_rate / 12 * loan.time_to_maturity
+            bid_price = proj_interest + 100 - ((loan.pd * loan.time_to_maturity) / self.target_score)
 
-        bid_price = proj_interest + 100 - ((loan.pd * loan.time_to_maturity) / self.target_score)
+        # using a portfolio included pricing method to determine the bid price
+        # uses projected interest if the new loan is included in the portfolio
+
+        elif pricing_method == 'portfolio_included':
+            # creating a temporary portfolio to calculate the projected interest
+            temp_portfolio = self.portfolio.copy()
+            temp_portfolio.append(loan)
+
+            # calculating the projected interest of the entire portfolio
+            proj_interest = np.sum([(loan.interest_rate / 12 * loan.time_to_maturity * loan.size) for loan in temp_portfolio])
+            portfolio_size = sum([loan.size for loan in temp_portfolio])
+            proj_interest = proj_interest / portfolio_size
+            bid_price = proj_interest + 100 - ((loan.pd * loan.time_to_maturity) / self.target_score)
+
 
         return bid_price
 
     def update(self, float_interest=0, cycle=None):
+        """
+        Updates the investor's state for a given cycle.
+
+        Parameters:
+        - float_interest (float, optional): The floating base rate for interest. Defaults to 0.
+        - cycle (int, optional): The current cycle. Not currently used.
+        """
+
         self.receive_interest(float_interest)
         self.calculate_value()
         self.calculate_current_score()
