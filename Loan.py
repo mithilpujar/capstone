@@ -1,5 +1,8 @@
 import numpy as np
 import uuid
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 class Loan:
     """
@@ -41,7 +44,7 @@ class Loan:
         self.starting_cycle = self.current_cycle
         self.ending_cycle = self.starting_cycle + self.maturity
         self.time_to_maturity = self.ending_cycle - self.current_cycle
-        self.pd = np.random.beta(1, 50)
+        self.pd = np.random.beta(1, 10)
         self.size = np.random.uniform(500_000, 5_000_000)
         self.interest_rate = self.generate_interest_rate()
         self.fair_value = self.calculate_price()
@@ -72,10 +75,30 @@ class Loan:
         The price is influenced by the probability of default, interest rate, and size.
         """
 
-        pd_effect = -7 * self.pd if self.pd <= 0.2 else -14 * self.pd
-        ir_effect = 5 * self.interest_rate
-        size_effect = -0.0000002 * self.size
-        return 100 + pd_effect + ir_effect + size_effect
+        # Effect of PD on price with additional penalty for PD > 0.2
+        beta1 = np.random.normal(-7, 1)
+        pd_effect = beta1 * self.pd
+        if self.pd > 0.2:
+            pd_effect *= 2  # Double the negative effect for PD > 0.2
+
+        # Stronger Effect of interest rate on price
+        beta2 = np.random.normal(5, 1)
+        ir_effect = beta2 * self.interest_rate
+
+        # Effect of size on price
+        beta3 = np.random.uniform(-0.00000002, 0)  # Smaller coefficient
+        size_effect = beta3 * self.size
+
+        # Intermediate price
+        intermediate_price = np.random.normal(100, 0.5) + pd_effect + ir_effect + size_effect
+
+        # Maturity effect to bring price closer to par value for lower maturities
+        k = 0.5  # decay constant
+        maturity_effect = (intermediate_price - 100) * np.exp(-k * self.time_to_maturity)
+
+        final_price = intermediate_price - maturity_effect
+
+        return final_price
 
     @staticmethod
     def generate():
@@ -122,3 +145,4 @@ class Loan:
                 self.fair_value = 100  # Set to par value
                 self.market_price = 100  # Set to par value
         self.fair_value_history.append(self.fair_value)
+
