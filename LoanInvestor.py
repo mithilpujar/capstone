@@ -16,7 +16,7 @@ class LoanInvestor:
 
         self.id = 'I' + str(uuid.uuid4())
         self.capital = capital if capital else self.generate_initial_capital()
-        self.min_capital = min_capital
+        self.min_capital_pct = min_capital
         self.capital_history = []
         self.target_score = np.abs(np.random.normal(0.32, 0.1))
         self.loan_fair_values = []
@@ -53,7 +53,7 @@ class LoanInvestor:
         total_investment = 0
         for loan in available_loans:
             purchase_value = (loan.market_price / 100) * loan.size
-            if total_investment + purchase_value <= self.capital * (capital_threshold + self.min_capital):
+            if total_investment + purchase_value <= self.capital * (capital_threshold + self.min_capital_pct):
                 total_investment += purchase_value
                 loan.update_owner(self.id)
                 self.portfolio.append(loan)
@@ -118,8 +118,12 @@ class LoanInvestor:
         return loan_to_sell
 
     def get_bid_price(self, loan, pricing_method = 'portfolio_neutral'):
-        # use portfolio neutral pricing for the bid price
 
+        # if the loan has matured, you can't bid on it
+        if loan.maturity_bool == True:
+            return
+
+        # use portfolio neutral pricing for the bid price
         if pricing_method == 'portfolio_neutral':
             # takes a loan as an input and returns a bid price for the investor
             # breaks if the investor can't purchase the loan
@@ -129,8 +133,7 @@ class LoanInvestor:
 
         # using a portfolio included pricing method to determine the bid price
         # uses projected interest if the new loan is included in the portfolio
-
-        elif pricing_method == 'portfolio_included':
+        if pricing_method == 'portfolio_included':
             # creating a temporary portfolio to calculate the projected interest
             temp_portfolio = self.portfolio.copy()
             temp_portfolio.append(loan)
@@ -141,6 +144,10 @@ class LoanInvestor:
             proj_interest = proj_interest / portfolio_size
             bid_price = proj_interest + 100 - ((loan.pd * loan.time_to_maturity) / self.target_score)
 
+        # ensuring the loan doesn't exceed the minimum capital for an investor
+        # if it does, then the investor will only bid until their minimum capital threshold
+        if (loan.size*(bid_price/100)) > self.capital:
+            bid_price = (self.capital * (1-self.min_capital_pct)) / loan.size
 
         return bid_price
 
