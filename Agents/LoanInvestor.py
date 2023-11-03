@@ -117,7 +117,7 @@ class LoanInvestor:
 
         return loan_to_sell
 
-    def get_bid_price(self, loan, pricing_method = 'portfolio_neutral'):
+    def get_bid_price(self, loan, pricing_method = 'portfolio_included'):
 
         # if the loan has matured, you can't bid on it
         if loan.maturity_bool == True:

@@ -1,6 +1,6 @@
-import Loan
-import LoanInvestor
-import Trader
+import Agents.Loan as Loan
+import Agents.LoanInvestor as LoanInvestor
+import Agents.LoanTrader as Trader
 import numpy as np
 
 class loanMarket:
