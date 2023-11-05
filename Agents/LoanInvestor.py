@@ -184,6 +184,13 @@ class LoanInvestor:
         """
 
         self.current_cycle = cycle
+
+        # removing matured loans from portfolio
+        self.matured_loans.extend([loan for loan in self.portfolio if loan.maturity_bool])
+        self.portfolio = [loan for loan in self.portfolio if not loan.maturity_bool]
+
         self.receive_interest(float_interest)
         self.calculate_value()
         self.calculate_current_score()
+
+

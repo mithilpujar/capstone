@@ -64,7 +64,7 @@ class Loan:
         The interest rate is influenced by the loan's probability of default.
         """
 
-        base_level_noise = np.random.normal(0.02, 0.005)
+        base_level_noise = np.random.normal(0.01, 0.005)
         correlation_factor = 0.8
         influence_factor = np.random.uniform(0.05, 0.15)
         correlated_component = correlation_factor * self.pd * influence_factor

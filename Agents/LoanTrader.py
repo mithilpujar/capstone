@@ -70,8 +70,10 @@ class LoanTrader:
             # if it is, we clear the sale
 
             if top_bidder['bid_price'] >= loan.reserve_price:
-                # removing the loan from the seller's portfolio
-                loan.current_owner.portfolio.remove(loan)
+                # removing the loan from the seller's portfolio or trader's loans for sale
+                if loan.current_owner.id[0] == 'I':
+                    loan.current_owner.portfolio.remove(loan)
+
 
                 # updating the loan's owner
                 loan.sale_price_history.append(top_bidder['bid_price'])
@@ -87,7 +89,4 @@ class LoanTrader:
                 print("Purchased: ", purchased)
                 print('Top bidder is {} with bid price {} for ${}'.format(top_bidder['investor'].id[:5], top_bidder['bid_price'], top_bidder['bid_price']/100*loan.size))
                 #print("\n Top Bidder Attributes: ", vars(top_bidder['investor']))
-        return
-
-    def sell_loan(self):
         return
