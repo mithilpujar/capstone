@@ -1,6 +1,6 @@
 import Agents.Loan as Loan
 import Agents.LoanInvestor as LoanInvestor
-import Agents.LoanTrader as Trader
+import Agents.LoanTrader as LoanTrader
 import numpy as np
 
 class loanMarket:
@@ -18,7 +18,7 @@ class loanMarket:
         self.investors = [LoanInvestor.LoanInvestor() for _ in range(self.num_investors)]
 
         # creating the universe of traders
-        self.traders = [Trader.Trader(max_investors=self.num_investors // self.num_traders) for _ in
+        self.traders = [LoanTrader.LoanTrader(max_investors=self.num_investors // self.num_traders) for _ in
                         range(self.num_traders)]
 
     def initialize(self):

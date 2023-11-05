@@ -1,8 +1,7 @@
-import numpy as np
 import uuid
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
+
+import numpy as np
+
 
 class Loan:
     """
@@ -29,9 +28,9 @@ class Loan:
 
     __slots__ = ['id', 'maturity', 'current_cycle', 'starting_cycle', 'ending_cycle', 'time_to_maturity', 'pd', 'size',
                  'interest_rate', 'fair_value', 'market_price', 'current_owner', 'maturity_bool', 'fair_value_history',
-                 'market_price_history', 'ownership_history']
+                 'market_price_history', 'ownership_history', 'sale_price_history', 'reserve_price']
 
-    def __init__(self, current_cycle=0, current_owner="no owner"):
+    def __init__(self, current_cycle=0, current_owner="no owner", reserve_price=0.80):
         """
         Initializes the Loan with random values for maturity, pd, size, interest rate, and fair value.
         Sets the starting cycle, calculates the ending cycle and time to maturity based on maturity.
@@ -49,12 +48,14 @@ class Loan:
         self.interest_rate = self.generate_interest_rate()
         self.fair_value = self.calculate_price()
         self.market_price = self.fair_value
+        self.reserve_price = self.fair_value * reserve_price
         self.current_owner = current_owner
         self.maturity_bool = False
 
         # tracking attributes
-        self.fair_value_history = []
-        self.market_price_history = []
+        self.fair_value_history = [self.fair_value]
+        self.market_price_history = [self.market_price]
+        self.sale_price_history = [None]
         self.ownership_history = [current_owner]
 
     def generate_interest_rate(self):
@@ -79,7 +80,7 @@ class Loan:
         beta1 = np.random.normal(-7, 1)
         pd_effect = beta1 * self.pd
         if self.pd > 0.2:
-            pd_effect *= 2  # Double the negative effect for PD > 0.2
+            pd_effect *= 3  # Double the negative effect for PD > 0.2
 
         # Stronger Effect of interest rate on price
         beta2 = np.random.normal(5, 1)
@@ -106,7 +107,7 @@ class Loan:
 
     def update_owner(self, new_owner):
         self.current_owner = new_owner
-        self.ownership_history.append(new_owner)
+        self.ownership_history.append(new_owner.id)
 
     def update(self, current_cycle, new_owner=None, new_market_price=None):
         """
@@ -132,6 +133,7 @@ class Loan:
 
         if new_market_price:
             self.market_price = new_market_price
+
         self.market_price_history.append(self.market_price)
 
         # Loan maturity logic

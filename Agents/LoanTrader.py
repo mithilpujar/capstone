@@ -1,5 +1,5 @@
 import uuid
-import numpy
+import numpy as np
 
 class LoanTrader:
     def __init__(self, max_investors=10, broker_fee=0.15, partner_fee=0.25):
@@ -9,12 +9,14 @@ class LoanTrader:
         self.friction_fee_partner = partner_fee  # frictional fee for trading through the partner trader in bps
         self.max_investors = max_investors
         self.max_investors_reached = False
+        self.current_cycle = 0
         self.loans_for_sale = []
         self.investors = []
+        self.revenue = []
 
     def add_investors(self, investors):
         for investor in investors:
-            if investor.trader == None and len(self.investors) < self.max_investors:
+            if investor.trader is None and len(self.investors) < self.max_investors:
                 self.investors.append(investor)
                 investor.trader = self
             else:
@@ -24,23 +26,67 @@ class LoanTrader:
     def update_loans_for_sale(self, available_loans):
         for loan in available_loans:
             self.loans_for_sale.append(loan)
-            loan.update_owner(self.id)
+            loan.update_owner(self)
+
+    def collect_loans_for_sale(self, print_outputs = False, num_investors = 3):
+        # method to collect the loans for sale from the investors
+        for investor in np.random.choice(self.investors, num_investors, replace=False):
+            # check the loan isn't already for sale
+            loan = investor.get_loan_to_sell()
+            if loan not in self.loans_for_sale:
+                # dropping none from the list of loans for sale
+                self.loans_for_sale.append(loan)
+                self.loans_for_sale = list(filter(None.__ne__, self.loans_for_sale))
+
+
+        if print_outputs:
+            print('Trader {} has {} loans for sale.'.format(self.id[:5], len(self.loans_for_sale)))
+            print('Investors with loans listed: ', [loan.current_owner.id[:5] for loan in self.loans_for_sale])
+            print('Loans for sale: ', self.loans_for_sale)
+
+        return
 
 
     def run_auction(self, show_bids = False):
         # method to run the auction for the loans by collecting bid prices and choosing the highest bid
         for loan in self.loans_for_sale:
-            top_bidder = {'id': None, 'bid_price': 0}
-            for investor in self.investors:
+            purchased = False
+            top_bidder = {'investor': None, 'bid_price': 0}
+            # the potential bidders are those who don't already own the loan
+            available_bidders = [investor for investor in self.investors if investor.id != loan.current_owner.id]
+            for investor in available_bidders:
                 bid = investor.get_bid_price(loan)
                 if bid > top_bidder['bid_price']:
-                    top_bidder['id'] = investor.id
+                    top_bidder['investor'] = investor
                     top_bidder['bid_price'] = bid
                 if show_bids:
                     print('Investor {} bids {} for loan {}'.format(investor.id[:5], bid, loan.id[:5]))
 
+            # updating the loan market price history
+            loan.market_price_history.append(top_bidder['bid_price'])
+            loan.market_price = top_bidder['bid_price']
+
+            # Now we check if the top bid is higher than the loan's reserve price
+            # if it is, we clear the sale
+
+            if top_bidder['bid_price'] >= loan.reserve_price:
+                # removing the loan from the seller's portfolio
+                loan.current_owner.portfolio.remove(loan)
+
+                # updating the loan's owner
+                loan.sale_price_history.append(top_bidder['bid_price'])
+                broker_fee_amt = (self.broker_fee/100)*(top_bidder['bid_price']/100)*loan.size
+                self.revenue.append(broker_fee_amt)
+                top_bidder['investor'].buy_loan(loan, broker_fee_amt)
+                self.loans_for_sale.remove(loan)
+                purchased = True
+
+
+
             if show_bids:
-                print('Top bidder is {} with bid price {} \n'.format(top_bidder['id'][:5], top_bidder['bid_price']))
+                print("Purchased: ", purchased)
+                print('Top bidder is {} with bid price {} for ${}'.format(top_bidder['investor'].id[:5], top_bidder['bid_price'], top_bidder['bid_price']/100*loan.size))
+                #print("\n Top Bidder Attributes: ", vars(top_bidder['investor']))
         return
 
     def sell_loan(self):
