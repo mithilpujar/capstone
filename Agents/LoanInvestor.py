@@ -111,6 +111,12 @@ class LoanInvestor:
         # start by sorting the portfolio by PD
         sorted_portfolio = sorted(self.portfolio, key=lambda x: x.pd / x.interest_rate, reverse=True)
 
+        # removing matured loans from the sorted portfolio
+        sorted_portfolio = [loan for loan in sorted_portfolio if not loan.maturity_bool]
+
+        if len(sorted_portfolio) == 0:
+            return
+
         # finding out what the wrong direction is by comparing current pd to target pd
         wrong_direction = self.current_score > self.target_score
 
@@ -131,7 +137,7 @@ class LoanInvestor:
 
         # if the loan has matured, you can't bid on it
         if loan.maturity_bool:
-            return
+            return 0
 
         # use portfolio neutral pricing for the bid price
         if pricing_method == 'portfolio_neutral':

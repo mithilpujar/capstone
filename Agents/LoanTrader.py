@@ -38,11 +38,16 @@ class LoanTrader:
                 self.loans_for_sale.append(loan)
                 self.loans_for_sale = list(filter(None.__ne__, self.loans_for_sale))
 
+        for loan in self.loans_for_sale:
+            if loan.maturity_bool == True:
+                pass
+                # print(loan.current_owner.id[:5])
+
 
         if print_outputs:
             print('Trader {} has {} loans for sale.'.format(self.id[:5], len(self.loans_for_sale)))
             print('Investors with loans listed: ', [loan.current_owner.id[:5] for loan in self.loans_for_sale])
-            print('Loans for sale: ', self.loans_for_sale)
+            print('Loans for sale: ', [loan.maturity_bool for loan in self.loans_for_sale])
 
         return
 
@@ -82,8 +87,6 @@ class LoanTrader:
                 top_bidder['investor'].buy_loan(loan, broker_fee_amt)
                 self.loans_for_sale.remove(loan)
                 purchased = True
-
-
 
             if show_bids:
                 print("Purchased: ", purchased)
