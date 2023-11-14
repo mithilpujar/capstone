@@ -33,15 +33,9 @@ class LoanTrader:
         for investor in np.random.choice(self.investors, num_investors, replace=False):
             # check the loan isn't already for sale
             loan = investor.get_loan_to_sell()
-            if loan not in self.loans_for_sale:
+            if loan is not None and loan not in self.loans_for_sale:
                 # dropping none from the list of loans for sale
                 self.loans_for_sale.append(loan)
-                self.loans_for_sale = list(filter(None.__ne__, self.loans_for_sale))
-
-        for loan in self.loans_for_sale:
-            if loan.maturity_bool == True:
-                pass
-                # print(loan.current_owner.id[:5])
 
 
         if print_outputs:
@@ -79,7 +73,6 @@ class LoanTrader:
                 if loan.current_owner.id[0] == 'I':
                     loan.current_owner.portfolio.remove(loan)
 
-
                 # updating the loan's owner
                 loan.sale_price_history.append(top_bidder['bid_price'])
                 broker_fee_amt = (self.broker_fee/100)*(top_bidder['bid_price']/100)*loan.size
@@ -88,8 +81,19 @@ class LoanTrader:
                 self.loans_for_sale.remove(loan)
                 purchased = True
 
+            # purging the loans for sale book if the loan has matured
+            self.loans_for_sale = [loan for loan in self.loans_for_sale if not loan.maturity_bool]
+
             if show_bids:
                 print("Purchased: ", purchased)
                 print('Top bidder is {} with bid price {} for ${}'.format(top_bidder['investor'].id[:5], top_bidder['bid_price'], top_bidder['bid_price']/100*loan.size))
                 #print("\n Top Bidder Attributes: ", vars(top_bidder['investor']))
+        return
+
+    def update(self, cycle, num_investors=3):
+        # consolidating trader actions into a unified method
+
+        self.current_cycle = cycle
+        self.collect_loans_for_sale(num_investors=num_investors)
+        self.run_auction()
         return
