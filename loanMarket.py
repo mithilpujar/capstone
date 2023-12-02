@@ -2,17 +2,18 @@ import Agents.Loan as Loan
 import Agents.LoanInvestor as LoanInvestor
 import Agents.LoanTrader as LoanTrader
 import numpy as np
+import streamlit as st
 
 class loanMarket:
-    def __init__(self, num_loans, num_investors, num_traders):
+    def __init__(self):
 
         self.cycle = 0
-        self.num_loans = num_loans
-        self.num_investors = num_investors
-        self.num_traders = num_traders
+        self.num_loans = st.slider("Number of loans", 0, 10000, 100)
+        self.num_investors = st.slider("Number of investors", 0, 1000, 10)
+        self.num_traders = st.slider("Number of traders", 0, 1000, 10)
 
         # creating the universe of loans
-        self.loans = [Loan.Loan() for _ in range(self.num_loans)]
+        self.loans = [Loan.LoanObj() for _ in range(self.num_loans)]
 
         # creating the universe of investors
         self.investors = [LoanInvestor.LoanInvestor() for _ in range(self.num_investors)]
@@ -23,42 +24,9 @@ class loanMarket:
 
     def initialize(self):
 
-        for investor in self.investors:
-            # regenerating list of available loans
-            available_loans = [loan for loan in self.loans if loan.current_owner == "no owner"]
-            investor.initialize_portfolio(available_loans)
 
-        # Assign unsold loans to traders
-        unsold_loans = [loan for loan in self.loans if loan.current_owner == "no owner"]
-        unsold_loans_count = len(unsold_loans)
-        loans_per_trader = unsold_loans_count // self.num_traders
 
-        for trader_ in self.traders:
-            trader_loans = unsold_loans[:loans_per_trader]
-            unsold_loans = unsold_loans[loans_per_trader:]  # Update the unsold_loans list
-            trader_.initialize_book(trader_loans)
 
-            # Assign investors to the trader if they haven't reached their maximum
-            if not trader_.max_investors_reached:
-                trader_.add_investor(self.investors)
-
-        # If there are any leftover loans, assign them randomly to the traders
-        for loan in unsold_loans:
-            trader = np.random.choice(self.traders)
-            loan.update_owner(trader.id)
-            trader.loans_for_sale.append(loan)
-
-        # Assign any unassigned investors to traders randomly
-        unassigned_investors = [investor for investor in self.investors if investor.trader is None]
-        for investor in unassigned_investors:
-            trader = np.random.choice(self.traders)
-            trader.investors.append(investor)
-            investor.trader = trader
-
-        # Assign the partner trader to each trader
-        for trader in self.traders:
-            partner_trader = np.random.choice([t for t in self.traders if t != trader], replace=False)
-            trader.partner_trader = partner_trader
 
     def update(self):
         for loan in self.loans:
@@ -78,3 +46,6 @@ class loanMarket:
             avg_value = sum(cycle_values) / len(cycle_values) if cycle_values else 0
             avg_portfolio_values.append(avg_value)
         return avg_portfolio_values
+
+markettrial = loanMarket()
+markettrial.initialize()

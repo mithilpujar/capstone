@@ -3,7 +3,7 @@ import uuid
 import numpy as np
 
 
-class Loan:
+class LoanObj:
     """
     Represents a loan in the simulation.
 
