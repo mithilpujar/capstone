@@ -1,7 +1,8 @@
 import uuid
 import numpy as np
+import streamlit as st
 
-class LoanTrader:
+class LoanTraderObj:
     def __init__(self, max_investors=10, broker_fee=0.15, partner_fee=0.25):
         self.id = 'T' + str(uuid.uuid4())
         self.partner_trader = None
@@ -28,9 +29,13 @@ class LoanTrader:
             self.loans_for_sale.append(loan)
             loan.update_owner(self)
 
-    def collect_loans_for_sale(self, print_outputs = False, num_investors = 3):
+    def collect_loans_for_sale(self, print_outputs = False, num_investors = 1):
+
+
         # method to collect the loans for sale from the investors
-        for investor in np.random.choice(self.investors, num_investors, replace=False):
+        investors_with_loans_for_sale = [investor for investor in self.investors if investor.get_loan_to_sell() is not None]
+
+        for investor in investors_with_loans_for_sale:
             # check the loan isn't already for sale
             loan = investor.get_loan_to_sell()
             if loan is not None and loan not in self.loans_for_sale:
@@ -47,12 +52,17 @@ class LoanTrader:
 
 
     def run_auction(self, show_bids = False):
+
+        if self.loans_for_sale == []:
+            return
+
         # method to run the auction for the loans by collecting bid prices and choosing the highest bid
         for loan in self.loans_for_sale:
             purchased = False
             top_bidder = {'investor': None, 'bid_price': 0}
             # the potential bidders are those who don't already own the loan
             available_bidders = [investor for investor in self.investors if investor.id != loan.current_owner.id]
+
             for investor in available_bidders:
                 bid = investor.get_bid_price(loan)
                 if bid > top_bidder['bid_price']:
@@ -60,6 +70,9 @@ class LoanTrader:
                     top_bidder['bid_price'] = bid
                 if show_bids:
                     print('Investor {} bids {} for loan {}'.format(investor.id[:5], bid, loan.id[:5]))
+
+            if top_bidder['investor'] is None:
+                return
 
             # updating the loan market price history
             loan.market_price_history.append(top_bidder['bid_price'])

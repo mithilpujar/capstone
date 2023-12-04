@@ -26,11 +26,11 @@ class LoanObj:
         ownership_history (list): History of the loan's ownership.
     """
 
-    __slots__ = ['id', 'maturity', 'current_cycle', 'starting_cycle', 'ending_cycle', 'time_to_maturity', 'pd', 'size',
+    __slots__ = ['id', 'maturity', 'current_cycle', 'starting_cycle', 'ending_cycle', 'time_to_maturity', 'pd', 'size', 'base_interest_rate',
                  'interest_rate', 'fair_value', 'market_price', 'current_owner', 'maturity_bool', 'fair_value_history',
                  'market_price_history', 'ownership_history', 'sale_price_history', 'reserve_price']
 
-    def __init__(self, current_cycle=0, current_owner="no owner", reserve_price=0.80):
+    def __init__(self, current_cycle=0, current_owner="no owner", reserve_price=0.80, float_interest=0):
         """
         Initializes the Loan with random values for maturity, pd, size, interest rate, and fair value.
         Sets the starting cycle, calculates the ending cycle and time to maturity based on maturity.
@@ -45,7 +45,8 @@ class LoanObj:
         self.time_to_maturity = self.ending_cycle - self.current_cycle
         self.pd = np.random.beta(1, 10)
         self.size = np.random.uniform(500_000, 5_000_000)
-        self.interest_rate = self.generate_interest_rate()
+        self.base_interest_rate = self.generate_interest_rate()
+        self.interest_rate = self.base_interest_rate + float_interest
         self.fair_value = self.calculate_price()
         self.market_price = self.fair_value
         self.reserve_price = self.fair_value * reserve_price
@@ -97,19 +98,19 @@ class LoanObj:
         k = 0.5  # decay constant
         maturity_effect = (intermediate_price - 100) * np.exp(-k * self.time_to_maturity)
 
-        final_price = intermediate_price - maturity_effect
+        final_price = intermediate_price - maturity_effect - 30
 
         return final_price
 
     @staticmethod
     def generate():
-        return Loan()
+        return LoanObj()
 
     def update_owner(self, new_owner):
         self.current_owner = new_owner
         self.ownership_history.append(new_owner.id)
 
-    def update(self, current_cycle, new_owner=None, new_market_price=None):
+    def update(self, current_cycle, float_interest = 0, new_owner=None, new_market_price=None):
         """
         Updates the loan's attributes for a new cycle.
         If the loan has matured, checks for default and adjusts fair value and market price accordingly.
@@ -129,6 +130,7 @@ class LoanObj:
 
         self.current_cycle = current_cycle
         self.time_to_maturity = self.ending_cycle - self.current_cycle
+        self.interest_rate = self.base_interest_rate + float_interest
         self.fair_value = self.calculate_price()
 
         if new_market_price:

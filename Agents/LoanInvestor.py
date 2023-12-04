@@ -83,7 +83,7 @@ class LoanInvestor:
         self.current_score = (weighted_interest / total_size) / (
                 weighted_pd / total_size) if weighted_interest > 0 else 0
 
-    def receive_interest(self, float_interest=0):
+    def receive_interest(self):
         """
         This is the procedure every cycle for the investor to receive interest on their loans.
         :param float_interest: The floating base rate for interest (think SOFR)
@@ -95,7 +95,7 @@ class LoanInvestor:
                 self.matured_loans.append(loan)
                 self.portfolio.remove(loan)
             else:
-                total_interest += loan.size * (loan.interest_rate + float_interest) / 12
+                total_interest += loan.size * (loan.interest_rate) / 12
 
         self.capital += total_interest
         self.interest_received.append(total_interest)
@@ -180,7 +180,7 @@ class LoanInvestor:
         # updating the investor's values
         self.calculate_value()
 
-    def update(self, float_interest=0, cycle=None):
+    def update(self, cycle=None):
         """
         Updates the investor's state for a given cycle.
 
@@ -195,7 +195,7 @@ class LoanInvestor:
         self.matured_loans.extend([loan for loan in self.portfolio if loan.maturity_bool])
         self.portfolio = [loan for loan in self.portfolio if not loan.maturity_bool]
 
-        self.receive_interest(float_interest)
+        self.receive_interest()
         self.calculate_value()
         self.calculate_current_score()
 
