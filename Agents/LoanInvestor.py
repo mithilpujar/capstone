@@ -3,8 +3,8 @@ import uuid
 import numpy as np
 
 
-class LoanInvestor:
-    def __init__(self, trader=None, capital=None, min_capital=0.15):
+class LoanInvestorObj:
+    def __init__(self, trader=None, capital=None, min_capital=0.15, target_score_param = 0.388):
         """
         Initializes the LoanInvestor object with given or default parameters.
 
@@ -18,7 +18,9 @@ class LoanInvestor:
         self.capital = capital if capital else self.generate_initial_capital()
         self.min_capital_pct = min_capital
         self.capital_history = []
-        self.target_score = np.abs(np.random.normal(0.32, 0.1))
+
+        # target score should be negatively correlated with capital
+        self.target_score = np.abs(np.random.normal(target_score_param, 0.1) - np.log(self.capital)/100)
         self.current_score = 0
         self.current_cycle = 0
 
@@ -43,7 +45,7 @@ class LoanInvestor:
         float: Initial capital.
         """
 
-        random_capital = np.round((np.random.pareto(2, 1) + 1) * 50 * 1000000, 0)[0]
+        random_capital = np.round(np.random.pareto(2) * 50e6 + 50e6)
         return random_capital
 
     def initialize_portfolio(self, available_loans, capital_threshold=0.1):
@@ -70,6 +72,9 @@ class LoanInvestor:
         self.loan_fair_values.append(np.sum([((loan.fair_value/100) * loan.size) for loan in self.portfolio]))
         self.portfolio_values.append(self.loan_fair_values[-1] + self.capital)
         self.capital_history.append(self.capital)
+
+    def tune_target_score(self, target_score_param):
+        self.target_score = np.abs(np.random.normal(target_score_param, 0.1))
 
     def calculate_value(self):
         self.loan_fair_values.append(np.sum([((loan.fair_value / 100) * loan.size) for loan in self.portfolio]))
