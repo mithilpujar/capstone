@@ -98,7 +98,7 @@ class LoanObj:
         k = 0.5  # decay constant
         maturity_effect = (intermediate_price - 100) * np.exp(-k * self.time_to_maturity)
 
-        final_price = intermediate_price - maturity_effect - 30
+        final_price = intermediate_price - maturity_effect
 
         return final_price
 
