@@ -78,7 +78,7 @@ class LoanObj:
         """
 
         # Effect of PD on price with additional penalty for PD > 0.2
-        beta1 = np.random.normal(-7, 1)
+        beta1 = np.random.normal(-8, 1)
         pd_effect = beta1 * self.pd
         if self.pd > 0.2:
             pd_effect *= 3  # Double the negative effect for PD > 0.2

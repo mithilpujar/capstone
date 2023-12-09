@@ -13,7 +13,7 @@ class loanMarket:
         self.cycle = 0
         self.num_loans = st.slider("Number of loans", 0, 10000, 100)
         self.num_investors = st.slider("Number of investors", 0, 1000, 10)
-        self.num_traders = st.slider("Number of traders", 0, 1000, 10)
+        self.num_traders = st.slider("Number of traders", 0, self.num_investors, 10)
         self.interest_rate = st.slider('Interest Rate', min_value=0.00, max_value=0.15, value=0.05, step=0.01)
 
 
@@ -21,7 +21,7 @@ class loanMarket:
         self.loans = [Loan.LoanObj(float_interest=self.interest_rate) for _ in range(self.num_loans)]
 
         # creating the universe of investors
-        self.investors = [LoanInvestor.LoanInvestor() for _ in range(self.num_investors)]
+        self.investors = [LoanInvestor.LoanInvestorObj() for _ in range(self.num_investors)]
 
         # creating the universe of traders
         self.traders = [LoanTrader.LoanTraderObj(max_investors=self.num_investors // self.num_traders) for _ in
@@ -39,6 +39,7 @@ class loanMarket:
             trader.add_investors(self.investors)
 
     def update(self):
+        self.loans.extend([Loan.LoanObj(float_interest=self.interest_rate) for _ in range(self.num_loans//10)])
         for loan in self.loans:
             # loans are updated independent of investors
             loan.update(self.cycle + 1, float_interest=self.interest_rate)

@@ -4,7 +4,7 @@ import numpy as np
 
 
 class LoanInvestorObj:
-    def __init__(self, trader=None, capital=None, min_capital=0.15, target_score_param = 0.388):
+    def __init__(self, trader=None, capital=None, min_capital=0.15, target_score_param = 0.206):
         """
         Initializes the LoanInvestor object with given or default parameters.
 
@@ -20,7 +20,7 @@ class LoanInvestorObj:
         self.capital_history = []
 
         # target score should be negatively correlated with capital
-        self.target_score = np.abs(np.random.normal(target_score_param, 0.1) - np.log(self.capital)/100)
+        self.target_score = np.abs(np.random.normal(target_score_param, 0.1)) if self.capital < 10e8 else np.abs(np.random.normal(target_score_param*0.5, 0.05))
         self.current_score = 0
         self.current_cycle = 0
 
@@ -74,10 +74,14 @@ class LoanInvestorObj:
         self.capital_history.append(self.capital)
 
     def tune_target_score(self, target_score_param):
-        self.target_score = np.abs(np.random.normal(target_score_param, 0.1))
+        self.target_score = np.abs(np.random.normal(target_score_param, 0.1)) if self.capital < 10e8 else np.abs(np.random.normal(target_score_param*0.5, 0.05))
 
-    def calculate_value(self):
-        self.loan_fair_values.append(np.sum([((loan.fair_value / 100) * loan.size) for loan in self.portfolio]))
+    def calculate_value(self, just_matured = []):
+        self.loan_fair_values.append(np.sum([((loan.fair_value / 100) * loan.size) for loan in self.portfolio if not loan.maturity_bool]))
+
+        # adding in the value of the matured loans
+        self.capital += np.sum([((loan.fair_value / 100) * loan.size) for loan in just_matured])
+
         self.portfolio_values.append(self.loan_fair_values[-1] + self.capital)
         self.capital_history.append(self.capital)
 
@@ -197,11 +201,12 @@ class LoanInvestorObj:
         self.current_cycle = cycle
 
         # removing matured loans from portfolio
-        self.matured_loans.extend([loan for loan in self.portfolio if loan.maturity_bool])
+        just_matured = [loan for loan in self.portfolio if loan.maturity_bool]
+        self.matured_loans.extend(just_matured)
         self.portfolio = [loan for loan in self.portfolio if not loan.maturity_bool]
 
         self.receive_interest()
-        self.calculate_value()
+        self.calculate_value(just_matured)
         self.calculate_current_score()
 
 
