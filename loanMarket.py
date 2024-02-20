@@ -89,6 +89,12 @@ class loanMarket:
         plt.ylabel('Value')
         st.pyplot(ax)
 
+    def print_parameter_values(self):
+        print('Number of loans:', self.num_loans)
+        print('Number of investors:', self.num_investors)
+        print('Number of traders:', self.num_traders)
+        print('Interest rate:', self.interest_rate)
+
 
 markettrial = loanMarket()
 markettrial.initialize()
@@ -100,4 +106,5 @@ for _ in range(cycles):
 
 markettrial.plot_portfolio_values()
 markettrial.plot_sale_prices()
+markettrial.print_parameter_values()
 
