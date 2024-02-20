@@ -36,6 +36,10 @@ class LoanInvestorObj:
         # adding in trading logic
         self.loans_for_sale = []
 
+        # storing sold loans
+        self.sold_loans = []
+        self.purchased_loans = []
+
     @staticmethod
     def generate_initial_capital():
         """
@@ -48,7 +52,7 @@ class LoanInvestorObj:
         random_capital = np.round(np.random.pareto(2) * 50e6 + 50e6)
         return random_capital
 
-    def initialize_portfolio(self, available_loans, capital_threshold=0.1):
+    def initialize_portfolio(self, available_loans):
 
         """
         Initializes the investor's portfolio with available loans.
@@ -60,7 +64,7 @@ class LoanInvestorObj:
         total_investment = 0
         for loan in available_loans:
             purchase_value = (loan.market_price / 100) * loan.size
-            if total_investment + purchase_value <= self.capital * (capital_threshold + self.min_capital_pct):
+            if total_investment + purchase_value <= self.capital * (self.min_capital_pct):
                 total_investment += purchase_value
                 loan.update_owner(self)
                 self.portfolio.append(loan)
@@ -82,8 +86,6 @@ class LoanInvestorObj:
         # adding in the value of the matured loans
         self.capital += np.sum([((loan.fair_value / 100) * loan.size) for loan in just_matured])
 
-        self.portfolio_values.append(self.loan_fair_values[-1] + self.capital)
-        self.capital_history.append(self.capital)
 
     def calculate_current_score(self):
         weighted_interest = sum([loan.interest_rate * loan.size for loan in self.portfolio])
@@ -180,6 +182,7 @@ class LoanInvestorObj:
         # method for the investor to buy the loan after they have won an auction
         # updates the investor's portfolio and capital
         self.portfolio.append(loan_to_purchase)
+        self.purchased_loans.append(loan_to_purchase.id)
         self.capital -= loan_to_purchase.size * (loan_to_purchase.sale_price_history[-1] / 100)
         self.capital -= broker_fee
 
@@ -207,6 +210,8 @@ class LoanInvestorObj:
 
         self.receive_interest()
         self.calculate_value(just_matured)
+        self.portfolio_values.append(self.loan_fair_values[-1] + self.capital)
+        self.capital_history.append(self.capital)
         self.calculate_current_score()
 
 

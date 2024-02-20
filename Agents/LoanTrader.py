@@ -3,7 +3,7 @@ import numpy as np
 import streamlit as st
 
 class LoanTraderObj:
-    def __init__(self, max_investors=10, broker_fee=0.15, partner_fee=0.25):
+    def __init__(self, max_investors=10, broker_fee=0.0, partner_fee=0.25):
         self.id = 'T' + str(uuid.uuid4())
         self.partner_trader = None
         self.broker_fee = broker_fee  # fee for trading through the broker in bps
@@ -84,7 +84,9 @@ class LoanTraderObj:
             if top_bidder['bid_price'] >= loan.reserve_price:
                 # removing the loan from the seller's portfolio or trader's loans for sale
                 if loan.current_owner.id[0] == 'I':
+                    loan.current_owner.sold_loans.append(loan.id)
                     loan.current_owner.portfolio.remove(loan)
+
 
                 # updating the loan's owner
                 loan.sale_price_history.append(top_bidder['bid_price'])

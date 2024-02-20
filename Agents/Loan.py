@@ -43,7 +43,7 @@ class LoanObj:
         self.starting_cycle = self.current_cycle
         self.ending_cycle = self.starting_cycle + self.maturity
         self.time_to_maturity = self.ending_cycle - self.current_cycle
-        self.pd = np.random.beta(1, 10)
+        self.pd = (np.random.beta(2, 100))
         self.size = np.random.uniform(500_000, 5_000_000)
         self.base_interest_rate = self.generate_interest_rate()
         self.interest_rate = self.base_interest_rate + float_interest
@@ -143,7 +143,7 @@ class LoanObj:
             self.maturity_bool = True
             default_outcome = np.random.rand() < self.pd
             if default_outcome:
-                self.fair_value = np.random.normal(10, 2)
+                self.fair_value = np.random.normal(60, 10)
                 self.market_price = self.fair_value  # Set to liquidation value
             else:
                 self.fair_value = 100  # Set to par value
