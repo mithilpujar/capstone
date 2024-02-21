@@ -11,11 +11,11 @@ class loanMarket:
     def __init__(self):
 
         self.cycle = 0
-        self.num_loans = st.slider("Number of loans", 0, 10000, 100)
-        self.num_investors = st.slider("Number of investors", 0, 1000, 10)
-        self.num_traders = st.slider("Number of traders", 0, self.num_investors, 10)
+        self.num_loans = st.number_input('Number of loans', min_value=1, max_value=100000, value=100, step=10)
+        self.num_investors = st.number_input('Number of investors', min_value=1, max_value=1000, value=100, step=10)
+        self.num_traders = st.number_input('Number of traders', min_value=1, max_value = self.num_investors, value=10, step=1)
         self.interest_rate = st.slider('Interest Rate', min_value=0.00, max_value=0.15, value=0.05, step=0.01)
-        self.broker_fee = st.slider('Broker Fee', min_value=0.01, max_value=0.35, value=0.15, step=0.01)
+        self.broker_fee = st.slider('Broker Fee', min_value=0.01, max_value=1.0, value=0.15, step=0.01)
         self.min_capital = st.slider('Minimum Capital Percent', min_value=0.01, max_value=0.30, value=0.05, step=0.01)
 
 
@@ -23,7 +23,7 @@ class loanMarket:
         self.loans = [Loan.LoanObj(float_interest=self.interest_rate) for _ in range(self.num_loans)]
 
         # creating the universe of investors
-        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital) for _ in range(self.num_investors)]
+        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=0.616) for _ in range(self.num_investors)]
 
         # creating the universe of traders
         self.traders = [LoanTrader.LoanTraderObj(max_investors=self.num_investors // self.num_traders, broker_fee=self.broker_fee) for _ in
@@ -82,7 +82,6 @@ class loanMarket:
         plt.ylabel('Value')
         st.pyplot(ax)
 
-
     def plot_capital_values(self):
         ax = plt.figure()
         for investor in self.investors:
@@ -121,7 +120,7 @@ class loanMarket:
         col3.metric(label='Broker Fee', value=self.broker_fee)
         col3.metric(label='Minimum Capital Percent', value=self.min_capital)
 
-    def get_winners_losers(self, plot_values=False):
+    def get_winners_losers_capital(self, plot_values=False):
         # Calculate the winners and losers as the highest capital difference between beginning and end
         winners = []
         losers = []
@@ -135,16 +134,76 @@ class loanMarket:
                     losers.append(investor)
 
         ax1 = plt.figure()
-        plt.scatter([investor.id for investor in winners], [investor.capital_history[-1] - investor.capital_history[0] for investor in winners], label='Winners', color='g')
-        plt.title('Plot of {} Winners'.format(len(winners)))
+        plt.scatter([investor.id for investor in winners], sorted([investor.capital_history[-1] - investor.capital_history[0] for investor in winners]), label='Winners', color='g')
+        plt.title('Plot of {} Capital Winners'.format(len(winners)))
+        plt.xticks(visible=False)
         plt.legend()
         st.pyplot(ax1)
 
         ax2 = plt.figure()
-        plt.scatter([investor.id for investor in losers], [investor.capital_history[-1] - investor.capital_history[0] for investor in losers], label='Losers', color='r')
-        plt.title('Plot of {} Losers'.format(len(losers)))
+        plt.scatter([investor.id for investor in losers], sorted([investor.capital_history[-1] - investor.capital_history[0] for investor in losers]), label='Losers', color='r')
+        plt.title('Plot of {} Capital Losers'.format(len(losers)))
+        plt.xticks(visible=False)
         plt.legend()
         st.pyplot(ax2)
+
+    def get_winners_losers_portfolio_value(self, plot_values=False):
+        winners = []
+        losers = []
+
+        for investor in self.investors:
+            if investor.portfolio_values:
+                portfolio_diff = investor.portfolio_values[-1] - investor.portfolio_values[0]
+                if portfolio_diff > 0:
+                    winners.append(investor)
+                else:
+                    losers.append(investor)
+
+        ax1 = plt.figure()
+        plt.scatter([investor.id for investor in winners], sorted([investor.portfolio_values[-1] - investor.portfolio_values[0] for investor in winners]), label='Winners', color='g')
+        plt.title('Plot of {} Portfolio Value Winners'.format(len(winners)))
+        plt.xticks(visible=False)
+        plt.legend()
+        st.pyplot(ax1)
+
+        ax2 = plt.figure()
+        plt.scatter([investor.id for investor in losers], sorted([investor.portfolio_values[-1] - investor.portfolio_values[0] for investor in losers]), label='Losers', color='r')
+        plt.title('Plot of {} Portfolio Value Losers'.format(len(losers)))
+        plt.xticks(visible=False)
+        plt.legend()
+        st.pyplot(ax2)
+
+
+    def plot_trader_revenue(self):
+        # plotting the trader revenue
+
+        fig1, ax1 = plt.subplots()
+        fig2, ax2 = plt.subplots()
+        fig3, ax3 = plt.subplots()
+
+        for trader in self.traders:
+            ax1.plot(trader.revenue_history)
+            ax2.plot(trader.broker_revenue_history)
+            ax3.plot(trader.interest_revenue_history)
+
+        ax1.set_title('Trader Revenue')
+        ax1.set_xlabel('Cycle')
+        ax1.set_ylabel('Revenue')
+
+        ax2.set_title('Broker Revenue')
+        ax2.set_xlabel('Cycle')
+        ax2.set_ylabel('Revenue')
+
+        ax3.set_title('Trader Interest Revenue')
+        ax3.set_xlabel('Cycle')
+        ax3.set_ylabel('Revenue')
+
+        # Displaying the plots using Streamlit
+        st.pyplot(fig1)
+        st.pyplot(fig2)
+        st.pyplot(fig3)
+
+        return
 
 
 
@@ -167,8 +226,6 @@ markettrial.print_parameter_values()
 markettrial.plot_portfolio_values()
 markettrial.plot_capital_values()
 markettrial.plot_sale_prices()
-markettrial.get_winners_losers(plot_values=True)
-
-
-
-
+markettrial.get_winners_losers_capital(plot_values=True)
+markettrial.get_winners_losers_portfolio_value(plot_values=True)
+markettrial.plot_trader_revenue()
