@@ -28,9 +28,9 @@ class LoanObj:
 
     __slots__ = ['id', 'maturity', 'current_cycle', 'starting_cycle', 'ending_cycle', 'time_to_maturity', 'pd', 'size', 'base_interest_rate',
                  'interest_rate', 'fair_value', 'market_price', 'current_owner', 'maturity_bool', 'fair_value_history',
-                 'market_price_history', 'ownership_history', 'sale_price_history', 'reserve_price']
+                 'market_price_history', 'ownership_history', 'sale_price_history', 'reserve_price', 'defaulted']
 
-    def __init__(self, current_cycle=0, current_owner="no owner", reserve_price=0.80, float_interest=0):
+    def __init__(self, current_cycle=0, current_owner="no owner", reserve_price=0.90, float_interest=0, default_rate = 100):
         """
         Initializes the Loan with random values for maturity, pd, size, interest rate, and fair value.
         Sets the starting cycle, calculates the ending cycle and time to maturity based on maturity.
@@ -43,7 +43,7 @@ class LoanObj:
         self.starting_cycle = self.current_cycle
         self.ending_cycle = self.starting_cycle + self.maturity
         self.time_to_maturity = self.ending_cycle - self.current_cycle
-        self.pd = (np.random.beta(2, 100))
+        self.pd = (np.random.beta(0.5, default_rate))
         self.size = np.random.uniform(500_000, 5_000_000)
         self.base_interest_rate = self.generate_interest_rate()
         self.interest_rate = self.base_interest_rate + float_interest
@@ -58,6 +58,7 @@ class LoanObj:
         self.market_price_history = [self.market_price]
         self.sale_price_history = [None]
         self.ownership_history = [current_owner]
+        self.defaulted = False
 
     def generate_interest_rate(self):
         """
@@ -77,11 +78,11 @@ class LoanObj:
         The price is influenced by the probability of default, interest rate, and size.
         """
 
-        # Effect of PD on price with additional penalty for PD > 0.2
+        # Effect of PD on price with additional penalty for PD > 0.1
         beta1 = np.random.normal(-8, 1)
         pd_effect = beta1 * self.pd
-        if self.pd > 0.2:
-            pd_effect *= 3  # Double the negative effect for PD > 0.2
+        if self.pd > 0.1:
+            pd_effect *= 3  # Double the negative effect for PD > 0.1
 
         # Stronger Effect of interest rate on price
         beta2 = np.random.normal(5, 1)
@@ -143,7 +144,8 @@ class LoanObj:
             self.maturity_bool = True
             default_outcome = np.random.rand() < self.pd
             if default_outcome:
-                self.fair_value = np.random.normal(60, 10)
+                self.fair_value = np.random.normal(70, 10)
+                self.defaulted = True
                 self.market_price = self.fair_value  # Set to liquidation value
             else:
                 self.fair_value = 100  # Set to par value

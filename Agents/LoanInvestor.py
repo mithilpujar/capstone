@@ -4,7 +4,7 @@ import numpy as np
 
 
 class LoanInvestorObj:
-    def __init__(self, trader=None, capital=None, min_capital=0.15, target_score_param = 0.616):
+    def __init__(self, trader=None, capital=None, min_capital=0.15, target_score_param = 2.174):
         """
         Initializes the LoanInvestor object with given or default parameters.
 
@@ -18,6 +18,7 @@ class LoanInvestorObj:
         self.capital = capital if capital else self.generate_initial_capital()
         self.min_capital_pct = min_capital
         self.capital_history = []
+        self.capital_history_2d = []
 
         # target score should be negatively correlated with capital
         self.target_score = np.abs(np.random.normal(target_score_param, 0.1)) if self.capital < 10e8 else np.abs(np.random.normal(target_score_param*0.5, 0.05))
@@ -134,7 +135,7 @@ class LoanInvestorObj:
             return
 
         # finding out what the wrong direction is by comparing current pd to target pd
-        wrong_direction = self.current_score > self.target_score
+        wrong_direction = self.current_score < self.target_score
 
         # if the current score is less than the target score, then the wrong direction is positive, meaning we should sell the highest score loans
         # if the current score is greater than the target score, then the wrong direction is negative, meaning we should sell the lowest score loans
@@ -218,9 +219,9 @@ class LoanInvestorObj:
         self.calculate_value(just_matured)
         self.portfolio_values.append(self.loan_fair_values[-1] + self.capital)
 
-        if self.capital_history[-1] < self.capital:
-            self.capital_history.append(self.capital)
+        self.capital_history.append(self.capital)
 
+        self.capital_history_2d.append([self.capital, self.current_cycle])
 
         self.calculate_current_score()
 

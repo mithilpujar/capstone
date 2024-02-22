@@ -16,6 +16,7 @@ class LoanTraderObj:
         self.broker_revenue_history = []
         self.interest_revenue_history = []
         self.revenue_history = []
+        self.cycle_broker_revenue = 0
 
     def add_investors(self, investors):
         for investor in investors:
@@ -109,12 +110,15 @@ class LoanTraderObj:
     def receive_interest_payments(self):
         total_interest = 0
         for loan in self.loans_for_sale:
-            total_interest += (loan.interest_rate / 12) * loan.size
+            if not loan.maturity_bool and loan.current_owner.id[0] == 'T':
+                total_interest += (loan.interest_rate / 12) * loan.size
+
         self.interest_revenue_history.append(total_interest)
 
     def update(self, cycle, num_investors=3):
         # consolidating trader actions into a unified method
         self.cycle_broker_revenue = 0
+
         self.current_cycle = cycle
         self.collect_loans_for_sale(num_investors=num_investors)
         self.run_auction()
