@@ -28,9 +28,9 @@ class LoanObj:
 
     __slots__ = ['id', 'maturity', 'current_cycle', 'starting_cycle', 'ending_cycle', 'time_to_maturity', 'pd', 'size', 'base_interest_rate',
                  'interest_rate', 'fair_value', 'market_price', 'current_owner', 'maturity_bool', 'fair_value_history',
-                 'market_price_history', 'ownership_history', 'sale_price_history', 'reserve_price', 'defaulted']
+                 'market_price_history', 'ownership_history', 'sale_price_history', 'reserve_price', 'defaulted', 'recovery_value']
 
-    def __init__(self, current_cycle=0, current_owner="no owner", reserve_price=0.8, float_interest=0, default_rate = 100):
+    def __init__(self, current_cycle=0, current_owner="no owner", reserve_price=0.8, float_interest=0, default_rate = 100, recovery_value = 40):
         """
         Initializes the Loan with random values for maturity, pd, size, interest rate, and fair value.
         Sets the starting cycle, calculates the ending cycle and time to maturity based on maturity.
@@ -48,6 +48,7 @@ class LoanObj:
         self.base_interest_rate = self.generate_interest_rate()
         self.interest_rate = self.base_interest_rate + float_interest
         self.fair_value = self.calculate_price()
+        self.recovery_value = recovery_value
         self.market_price = self.fair_value
         self.reserve_price = self.market_price * reserve_price
         self.current_owner = current_owner
@@ -144,7 +145,7 @@ class LoanObj:
             self.maturity_bool = True
             default_outcome = np.random.rand() < self.pd
             if default_outcome:
-                self.fair_value = np.random.normal(70, 10)
+                self.fair_value = np.random.normal(self.recovery_value, 10)
                 self.defaulted = True
                 self.market_price = self.fair_value  # Set to liquidation value
             else:

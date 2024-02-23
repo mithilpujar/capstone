@@ -20,10 +20,11 @@ class loanMarket:
         self.min_capital = st.slider('Minimum Capital Percent', min_value=0.01, max_value=0.30, value=0.05, step=0.01)
         self.default_rate = st.slider('Default Rate', min_value=1, max_value=300, value=100, step=10)
         self.reserve_price = st.slider('Reserve Price', min_value=0.01, max_value=1.0, value=0.8, step=0.01)
+        self.recovery_value = st.slider('Recovery Value', min_value=1, max_value=100, value=40, step=1)
 
 
         # creating the universe of loans
-        self.loans = [Loan.LoanObj(float_interest=self.interest_rate, default_rate=301 - self.default_rate, reserve_price=self.reserve_price) for _ in range(self.num_loans)]
+        self.loans = [Loan.LoanObj(float_interest=self.interest_rate, default_rate=301 - self.default_rate, reserve_price=self.reserve_price, recovery_value=self.recovery_value) for _ in range(self.num_loans)]
 
         # creating the universe of investors
         self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=100) for _ in range(self.num_investors)]
