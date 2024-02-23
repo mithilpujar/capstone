@@ -6,6 +6,8 @@ import Agents.LoanTrader as LoanTrader
 import numpy as np
 import streamlit as st
 import matplotlib as mpl
+from matplotlib.ticker import FuncFormatter
+
 
 
 class loanMarket:
@@ -27,7 +29,7 @@ class loanMarket:
         self.loans = [Loan.LoanObj(float_interest=self.interest_rate, default_rate=301 - self.default_rate, reserve_price=self.reserve_price, recovery_value=self.recovery_value) for _ in range(self.num_loans)]
 
         # creating the universe of investors
-        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=100) for _ in range(self.num_investors)]
+        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=2.360) for _ in range(self.num_investors)]
 
         # creating the universe of traders
         self.traders = [LoanTrader.LoanTraderObj(max_investors=self.num_investors // self.num_traders, broker_fee=self.broker_fee) for _ in
@@ -123,13 +125,19 @@ class loanMarket:
     def print_parameter_values(self):
 
         col1, col2, col3 = st.columns(3)
+
         col1.metric(label='Number of loans', value=self.num_loans)
         col1.metric(label='Number of investors', value=self.num_investors)
         col1.metric(label = 'Number of Defaulted Loans', value = len([loan for loan in self.loans if loan.defaulted]))
+
         col2.metric(label='Number of traders', value=self.num_traders)
         col2.metric(label='Interest Rate', value=self.interest_rate)
+        col2.metric(label='Value of Defaulted Loans', value=round(np.mean([loan.fair_value_history[-1] for loan in self.loans if loan.defaulted]), 2))
+
         col3.metric(label='Broker Fee', value=self.broker_fee)
         col3.metric(label='Minimum Capital Percent', value=self.min_capital)
+
+
 
     def get_winners_losers_capital(self, plot_values=False):
         # Calculate the winners and losers as the highest capital difference between beginning and end
@@ -209,38 +217,55 @@ class loanMarket:
 
         return
 
-    def analyze_capital_history(self):
+    def analyze_top_bottom_investor(self):
+
+        # Formatter function to add commas
+        def comma_formatter(x, pos):
+            return "{:,}".format(int(x))
+
         # Analyze the capital history of the investors
 
-        ax1 = plt.figure()
+        fig, axs = plt.subplots(2, 2, figsize=(12, 10))  # Adjusted to create a 2x2 grid of plots
 
-        for investor in self.investors[:1]:
-            st.write("Matured loans: ", [loan.fair_value_history[-2] for loan in investor.matured_loans])
-            st.write("Portfolio: ", investor.portfolio)
+        # First find the top investor by capital increase
+        top_investor = max(self.investors, key=lambda x: x.capital_history[-1] - x.capital_history[0])
+        bottom_investor = min(self.investors, key=lambda x: x.capital_history[-1] - x.capital_history[0])
 
-            if investor.matured_loans == []:
+        # Plot for Top Investor (Financial Metrics)
+        axs[0, 0].plot(top_investor.capital_history, label='Capital', color='g')
+        axs[0, 0].plot(top_investor.portfolio_values, label='Portfolio Value', color='r')
+        axs[0, 0].set_title(f'Top Investor {top_investor.id[:5]} Financial History')
+        axs[0, 0].set_ylabel('Value')
+        axs[0, 0].legend(loc='upper left')
+        axs[0, 0].yaxis.set_major_formatter(FuncFormatter(comma_formatter))
 
-                # comparing the purchased_loans and sold_loans lists
-                if investor.purchased_loans == investor.sold_loans:
-                    st.write("Investor {} has no matured loans and has sold all purchased loans".format(investor.id[:5]))
-                else:
-                    st.write("Investor should be holding loans")
-                    st.write("Investor Portfolio: ", investor.portfolio)
-                    st.write("Investor Matured Loans: ", investor.matured_loans)
+        # Plot for Top Investor (Score Metrics)
+        axs[0, 1].plot(top_investor.current_score_history, label='Current Score', color='c')
+        axs[0, 1].axhline(y=top_investor.target_score, color='m', linestyle=':', label='Target Score')
+        axs[0, 1].set_title(f'Top Investor {top_investor.id[:5]} Score History')
+        axs[0, 1].set_ylabel('Score')
+        axs[0, 1].legend(loc='upper left')
 
-                st.write("Purchased loans: ", investor.purchased_loans)
-                st.write("Sold loans: ", investor.sold_loans)
+        # Plot for Bottom Investor (Financial Metrics)
+        axs[1, 0].plot(bottom_investor.capital_history, label='Capital', color='g')
+        axs[1, 0].plot(bottom_investor.portfolio_values, label='Portfolio Value', color='r')
+        axs[1, 0].set_title(f'Bottom Investor {bottom_investor.id[:5]} Financial History')
+        axs[1, 0].set_ylabel('Value')
+        axs[1, 0].legend(loc='upper left')
+        axs[1, 0].yaxis.set_major_formatter(FuncFormatter(comma_formatter))
 
+        # Plot for Bottom Investor (Score Metrics)
+        axs[1, 1].plot(bottom_investor.current_score_history, label='Current Score', color='c')
+        axs[1, 1].axhline(y=bottom_investor.target_score, color='m', linestyle=':', label='Target Score')
+        axs[1, 1].set_title(f'Bottom Investor {bottom_investor.id[:5]} Score History')
+        axs[1, 1].set_ylabel('Score')
+        axs[1, 1].legend(loc='upper left')
 
-        for investor in self.investors[:1]:
-            plt.plot(investor.capital_history, color='black', label=investor.id, linestyle='solid')
+        # Adjust layout for better readability
+        plt.tight_layout()
 
-        plt.title('Capital History')
-        plt.xlabel('Cycle')
-        plt.ylabel('Value')
-        plt.legend()
-
-        st.pyplot(ax1)
+        # Use Streamlit's pyplot function to display the matplotlib figure
+        st.pyplot(fig)
 
         return
 
@@ -253,7 +278,7 @@ class loanMarket:
         losers_sale = [loan for loan in loan_sale_sorted if loan.defaulted == False][:3]
 
         # Create a figure and two subplots (axes)
-        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10))  # Adjust figsize as needed
+        fig, (ax1, ax2, ax3, ax4, ax5, ax6) = plt.subplots(6, 1, figsize=(10, 30))  # Adjust figsize as needed
 
         # Plot winners on the first subplot
         for loan in winners_sale:
@@ -282,12 +307,38 @@ class loanMarket:
         for loan in winners_market:
             ax3.plot(loan.market_price_history, label=f"Loan {loan.id[:5]} Market Winner", linestyle='dashed')
         for loan in losers_market:
-            ax3.plot(loan.market_price_history, label=f"Loan {loan.id[:5]} Market Loser", linestyle='dashed')
+            ax4.plot(loan.market_price_history, label=f"Loan {loan.id[:5]} Market Loser", linestyle='dashed')
 
-        ax3.set_title('Winning and Losing Loans (by market price)')
+        ax3.set_title('Winning Loans (by market price)')
         ax3.set_xlabel('Cycle')
         ax3.set_ylabel('Value')
         ax3.legend()
+
+        ax4.set_title('Losing Loans (by market price)')
+        ax4.set_xlabel('Cycle')
+        ax4.set_ylabel('Value')
+        ax4.legend()
+
+        # plotting winners and losers by fair value
+        # Plot winners on the first subplot
+        loans_fair = sorted(self.loans, key=lambda x: x.fair_value_history[-1] - x.fair_value_history[0])
+        winners_fair = loans_fair[-3:]  # Top 3 loans with the highest increase in market value
+        losers_fair = loans_fair[:3]
+
+        for loan in winners_fair:
+            ax5.plot(loan.fair_value_history, label=f"Loan {loan.id[:5]} Fair Winner", linestyle='dashed')
+        for loan in losers_fair:
+            ax6.plot(loan.fair_value_history, label=f"Loan {loan.id[:5]} Fair Loser", linestyle='dashed')
+
+        ax5.set_title('Winning Loans (by fair value)')
+        ax5.set_xlabel('Cycle')
+        ax5.set_ylabel('Value')
+        ax5.legend()
+
+        ax6.set_title('Losing Loans (by fair value)')
+        ax6.set_xlabel('Cycle')
+        ax6.set_ylabel('Value')
+        ax6.legend()
 
         plt.tight_layout()  # Adjust the layout to make sure there's no overlap
         st.pyplot(fig)
@@ -349,6 +400,7 @@ class loanMarket:
 
         st.pyplot(fig)
 
+
 markettrial = loanMarket()
 markettrial.initialize()
 
@@ -371,6 +423,6 @@ markettrial.get_winners_losers_capital(plot_values=True)
 markettrial.get_winners_losers_portfolio_value()
 markettrial.plot_trader_revenue()
 
-markettrial.analyze_capital_history()
+markettrial.analyze_top_bottom_investor()
 markettrial.analyze_loan_market()
 markettrial.plot_total_market_value(cycles)

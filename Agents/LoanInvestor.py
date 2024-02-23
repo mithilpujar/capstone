@@ -22,6 +22,8 @@ class LoanInvestorObj:
         # target score should be negatively correlated with capital
         self.target_score = np.abs(np.random.normal(target_score_param, 0.1)) if self.capital < 10e8 else np.abs(np.random.normal(target_score_param*0.5, 0.05))
         self.current_score = 0
+        self.current_score_history = [self.current_score]
+
         self.current_cycle = 0
 
         self.loan_fair_values = []
@@ -83,12 +85,21 @@ class LoanInvestorObj:
     def tune_target_score(self, target_score_param):
         self.target_score = np.abs(np.random.normal(target_score_param, 0.1)) if self.capital < 10e8 else np.abs(np.random.normal(target_score_param*0.5, 0.05))
 
-    def calculate_current_score(self):
+    def calculate_current_score(self, normalized = False):
         total_size = sum([loan.size for loan in self.portfolio])
         if total_size > 0:
             weighted_interest = sum([loan.interest_rate * loan.size for loan in self.portfolio]) / total_size
             weighted_pd = sum([loan.pd * loan.size for loan in self.portfolio]) / total_size
-            self.current_score = ((weighted_interest) / (weighted_pd)) if weighted_interest > 0 else 0
+            raw_score = ((weighted_interest) / (weighted_pd)) if weighted_interest > 0 else 0
+
+            # Hypothetical Min and Max for normalization
+            Min = 0  # Assuming this is the lowest possible score
+            Max = 100  # Assuming this is the highest possible score
+
+            # Normalize the score
+            normalized_score = ((raw_score - Min) / (Max - Min))
+
+            self.current_score = normalized_score if normalized == True else raw_score
 
     def receive_interest(self):
         """
@@ -100,7 +111,7 @@ class LoanInvestorObj:
 
         for loan in self.portfolio:
             if loan.maturity_bool:
-                self.capital += ((loan.fair_value / 100) * loan.size)
+                self.capital += loan.size
                 self.matured_loans.append(loan)
                 self.portfolio.remove(loan)
 
@@ -223,7 +234,9 @@ class LoanInvestorObj:
 
         self.capital_history.append(self.capital)
 
-        self.calculate_current_score()
+        self.calculate_current_score(normalized=True)
+
+        self.current_score_history.append(self.current_score)
 
 
 
