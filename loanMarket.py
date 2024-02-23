@@ -137,8 +137,6 @@ class loanMarket:
         col3.metric(label='Broker Fee', value=self.broker_fee)
         col3.metric(label='Minimum Capital Percent', value=self.min_capital)
 
-
-
     def get_winners_losers_capital(self, plot_values=False):
         # Calculate the winners and losers as the highest capital difference between beginning and end
         winners = []
@@ -191,7 +189,6 @@ class loanMarket:
         plt.xticks(visible=False)
         plt.legend()
         st.pyplot(ax2)
-
 
     def plot_trader_revenue(self):
         # plotting the trader revenue
@@ -399,7 +396,6 @@ class loanMarket:
         plt.show()
 
         st.pyplot(fig)
-
 
 markettrial = loanMarket()
 markettrial.initialize()
