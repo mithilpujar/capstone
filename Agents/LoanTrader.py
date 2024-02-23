@@ -49,17 +49,30 @@ class LoanTraderObj:
         if print_outputs:
             print('Trader {} has {} loans for sale.'.format(self.id[:5], len(self.loans_for_sale)))
             print('Investors with loans listed: ', [loan.current_owner.id[:5] for loan in self.loans_for_sale])
-            print('Loans for sale: ', [loan.maturity_bool for loan in self.loans_for_sale])
+            print('Loans for sale: ', [loan.id[:5] for loan in self.loans_for_sale])
 
         return
 
     def run_auction(self, show_bids = False):
 
+        '''
+        The following method runs the auction amongst the investors that it services along with clearing the sale of the loans and transfering ownership.
+        :param show_bids:
+        :return:
+        '''
+
         if self.loans_for_sale == []:
             return
 
         # method to run the auction for the loans by collecting bid prices and choosing the highest bid
+
+        # purging the loans for sale book if the loan has matured
+        self.loans_for_sale = [loan for loan in self.loans_for_sale if not loan.maturity_bool]
+
+        loans_sold = []
+
         for loan in self.loans_for_sale:
+
             purchased = False
             top_bidder = {'investor': None, 'bid_price': 0}
             # the potential bidders are those who don't already own the loan
@@ -67,13 +80,16 @@ class LoanTraderObj:
 
             for investor in available_bidders:
                 bid = investor.get_bid_price(loan)
+
                 if bid > top_bidder['bid_price']:
                     top_bidder['investor'] = investor
                     top_bidder['bid_price'] = bid
+
                 if show_bids:
                     print('Investor {} bids {} for loan {}'.format(investor.id[:5], bid, loan.id[:5]))
 
             if top_bidder['investor'] is None:
+                raise('No bids for loan {}'.format(loan.id[:5]))
                 return
 
             # updating the loan market price history
@@ -86,7 +102,7 @@ class LoanTraderObj:
             if top_bidder['bid_price'] >= loan.reserve_price:
                 # removing the loan from the seller's portfolio or trader's loans for sale
                 if loan.current_owner.id[0] == 'I':
-                    loan.current_owner.sold_loans.append(loan.id)
+                    loan.current_owner.sold_loans.append(loan)
                     loan.current_owner.portfolio.remove(loan)
 
 
@@ -95,16 +111,19 @@ class LoanTraderObj:
                 broker_fee_amt = (self.broker_fee/100)*(top_bidder['bid_price']/100)*loan.size
                 self.cycle_broker_revenue += broker_fee_amt
                 top_bidder['investor'].buy_loan(loan, broker_fee_amt)
-                self.loans_for_sale.remove(loan)
+                loans_sold.append(loan)
                 purchased = True
-
-            # purging the loans for sale book if the loan has matured
-            self.loans_for_sale = [loan for loan in self.loans_for_sale if not loan.maturity_bool]
 
             if show_bids:
                 print("Purchased: ", purchased)
                 print('Top bidder is {} with bid price {} for ${}'.format(top_bidder['investor'].id[:5], top_bidder['bid_price'], top_bidder['bid_price']/100*loan.size))
+                print("Loan Ownership History: ", loan.ownership_history)
                 #print("\n Top Bidder Attributes: ", vars(top_bidder['investor']))
+
+        # removing the loans that have been sold from the trader's loans for sale
+        for loan in loans_sold:
+            self.loans_for_sale.remove(loan)
+
         return
 
     def receive_interest_payments(self):

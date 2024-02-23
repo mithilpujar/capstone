@@ -18,7 +18,6 @@ class LoanInvestorObj:
         self.capital = capital if capital else self.generate_initial_capital()
         self.min_capital_pct = min_capital
         self.capital_history = []
-        self.capital_history_2d = []
 
         # target score should be negatively correlated with capital
         self.target_score = np.abs(np.random.normal(target_score_param, 0.1)) if self.capital < 10e8 else np.abs(np.random.normal(target_score_param*0.5, 0.05))
@@ -40,6 +39,9 @@ class LoanInvestorObj:
         # storing sold loans
         self.sold_loans = []
         self.purchased_loans = []
+
+        # this holds the intra-update capital change
+        self.capital_change = 0
 
     @staticmethod
     def generate_initial_capital():
@@ -81,19 +83,12 @@ class LoanInvestorObj:
     def tune_target_score(self, target_score_param):
         self.target_score = np.abs(np.random.normal(target_score_param, 0.1)) if self.capital < 10e8 else np.abs(np.random.normal(target_score_param*0.5, 0.05))
 
-    def calculate_value(self, just_matured = []):
-        self.loan_fair_values.append(np.sum([((loan.fair_value / 100) * loan.size) for loan in self.portfolio if not loan.maturity_bool]))
-
-        # adding in the value of the matured loans
-        self.capital += np.sum([((loan.fair_value / 100) * loan.size) for loan in just_matured])
-
-
     def calculate_current_score(self):
-        weighted_interest = sum([loan.interest_rate * loan.size for loan in self.portfolio])
-        weighted_pd = sum([loan.pd * loan.size for loan in self.portfolio])
         total_size = sum([loan.size for loan in self.portfolio])
-        self.current_score = (weighted_interest / total_size) / (
-                weighted_pd / total_size) if weighted_interest > 0 else 0
+        if total_size > 0:
+            weighted_interest = sum([loan.interest_rate * loan.size for loan in self.portfolio]) / total_size
+            weighted_pd = sum([loan.pd * loan.size for loan in self.portfolio]) / total_size
+            self.current_score = ((weighted_interest) / (weighted_pd)) if weighted_interest > 0 else 0
 
     def receive_interest(self):
         """
@@ -104,7 +99,6 @@ class LoanInvestorObj:
         total_interest = 0
 
         for loan in self.portfolio:
-            entered = True
             if loan.maturity_bool:
                 self.capital += ((loan.fair_value / 100) * loan.size)
                 self.matured_loans.append(loan)
@@ -114,7 +108,7 @@ class LoanInvestorObj:
                 cycle_interest = (loan.interest_rate / 12) * loan.size
                 total_interest += cycle_interest
 
-        self.capital += total_interest
+        self.capital_change += total_interest
         self.interest_received.append(total_interest)
 
     def get_loan_to_sell(self, num_select=1, reserve_price = 0.8):
@@ -188,15 +182,13 @@ class LoanInvestorObj:
         # method for the investor to buy the loan after they have won an auction
         # updates the investor's portfolio and capital
         self.portfolio.append(loan_to_purchase)
-        self.purchased_loans.append(loan_to_purchase.id)
-        self.capital -= loan_to_purchase.size * (loan_to_purchase.sale_price_history[-1] / 100)
-        self.capital -= broker_fee
+        self.purchased_loans.append(loan_to_purchase)
+        self.capital_change -= loan_to_purchase.size * (loan_to_purchase.sale_price_history[-1] / 100)
+        self.capital_change -= broker_fee
 
         # updating the loan's owner
         loan_to_purchase.update_owner(self)
 
-        # updating the investor's values
-        self.calculate_value()
 
     def update(self, cycle=None):
         """
@@ -207,6 +199,8 @@ class LoanInvestorObj:
         - cycle (int, optional): The current cycle. Not currently used.
         """
 
+        self.capital_change = 0
+
         self.current_cycle = cycle
 
         self.receive_interest()
@@ -214,16 +208,24 @@ class LoanInvestorObj:
         # removing matured loans from portfolio
         just_matured = [loan for loan in self.portfolio if loan.maturity_bool]
         self.matured_loans.extend(just_matured)
+
         self.portfolio = [loan for loan in self.portfolio if not loan.maturity_bool]
 
-        self.calculate_value(just_matured)
+        self.loan_fair_values.append(np.sum([((loan.fair_value / 100) * loan.size) for loan in self.portfolio if not loan.maturity_bool]))
+
+        matured_loans_cash = np.sum([((loan.fair_value / 100) * loan.size) for loan in just_matured])
+
+        self.capital_change += matured_loans_cash
+
+        self.capital += self.capital_change
+
         self.portfolio_values.append(self.loan_fair_values[-1] + self.capital)
 
         self.capital_history.append(self.capital)
 
-        self.capital_history_2d.append([self.capital, self.current_cycle])
-
         self.calculate_current_score()
+
+
 
 
 

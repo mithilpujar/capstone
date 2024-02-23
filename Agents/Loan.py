@@ -30,7 +30,7 @@ class LoanObj:
                  'interest_rate', 'fair_value', 'market_price', 'current_owner', 'maturity_bool', 'fair_value_history',
                  'market_price_history', 'ownership_history', 'sale_price_history', 'reserve_price', 'defaulted']
 
-    def __init__(self, current_cycle=0, current_owner="no owner", reserve_price=0.90, float_interest=0, default_rate = 100):
+    def __init__(self, current_cycle=0, current_owner="no owner", reserve_price=0.8, float_interest=0, default_rate = 100):
         """
         Initializes the Loan with random values for maturity, pd, size, interest rate, and fair value.
         Sets the starting cycle, calculates the ending cycle and time to maturity based on maturity.
@@ -49,14 +49,14 @@ class LoanObj:
         self.interest_rate = self.base_interest_rate + float_interest
         self.fair_value = self.calculate_price()
         self.market_price = self.fair_value
-        self.reserve_price = self.fair_value * reserve_price
+        self.reserve_price = self.market_price * reserve_price
         self.current_owner = current_owner
         self.maturity_bool = False
 
         # tracking attributes
         self.fair_value_history = [self.fair_value]
         self.market_price_history = [self.market_price]
-        self.sale_price_history = [None]
+        self.sale_price_history = [self.market_price]
         self.ownership_history = [current_owner]
         self.defaulted = False
 
@@ -150,6 +150,7 @@ class LoanObj:
             else:
                 self.fair_value = 100  # Set to par value
                 self.market_price = 100  # Set to par value
+
         self.fair_value_history.append(self.fair_value)
 
     def as_dict(self):
