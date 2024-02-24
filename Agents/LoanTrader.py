@@ -88,9 +88,7 @@ class LoanTraderObj:
                 if show_bids:
                     print('Investor {} bids {} for loan {}'.format(investor.id[:5], bid, loan.id[:5]))
 
-            if top_bidder['investor'] is None:
-                raise('No bids for loan {}'.format(loan.id[:5]))
-                return
+
 
             # updating the loan market price history
             loan.market_price_history.append(top_bidder['bid_price'])

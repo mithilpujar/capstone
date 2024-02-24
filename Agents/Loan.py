@@ -43,7 +43,7 @@ class LoanObj:
         self.starting_cycle = self.current_cycle
         self.ending_cycle = self.starting_cycle + self.maturity
         self.time_to_maturity = self.ending_cycle - self.current_cycle
-        self.pd = (np.random.beta(0.5, default_rate))
+        self.pd = (np.random.beta(1, default_rate))
         self.size = np.random.uniform(500_000, 5_000_000)
         self.base_interest_rate = self.generate_interest_rate()
         self.interest_rate = self.base_interest_rate + float_interest

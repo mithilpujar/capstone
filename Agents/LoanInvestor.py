@@ -69,7 +69,7 @@ class LoanInvestorObj:
         total_investment = 0
         for loan in available_loans:
             purchase_value = (loan.market_price / 100) * loan.size
-            if total_investment + purchase_value <= self.capital * (self.min_capital_pct + 0.05):
+            if total_investment + purchase_value <= self.capital * (self.min_capital_pct + 0.1):
                 total_investment += purchase_value
                 loan.update_owner(self)
                 self.portfolio.append(loan)
@@ -167,6 +167,7 @@ class LoanInvestorObj:
             # breaks if the investor can't purchase the loan
             # start by calculating the total interest received from the loan
             proj_interest = loan.interest_rate / 12 * loan.time_to_maturity
+
             bid_price = proj_interest + 100 - ((loan.pd * loan.time_to_maturity) / self.target_score)
 
         # using a portfolio included pricing method to determine the bid price
@@ -177,10 +178,14 @@ class LoanInvestorObj:
             temp_portfolio.append(loan)
 
             # calculating the projected interest of the entire portfolio
-            proj_interest = np.sum([(loan.interest_rate / 12 * loan.time_to_maturity * loan.size) for loan in temp_portfolio])
+            proj_interest = np.sum([((loan.interest_rate / 12) * loan.time_to_maturity * loan.size) for loan in temp_portfolio])
             portfolio_size = sum([loan.size for loan in temp_portfolio])
             proj_interest = proj_interest / portfolio_size
             bid_price = proj_interest + 100 - ((loan.pd * loan.time_to_maturity) / self.target_score)
+
+            if bid_price < 0:
+                bid_price = 0
+
 
         # ensuring the loan doesn't exceed the minimum capital for an investor
         # if it does, then the investor will only bid until their minimum capital threshold

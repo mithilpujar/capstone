@@ -29,7 +29,7 @@ class loanMarket:
         self.loans = [Loan.LoanObj(float_interest=self.interest_rate, default_rate=301 - self.default_rate, reserve_price=self.reserve_price, recovery_value=self.recovery_value) for _ in range(self.num_loans)]
 
         # creating the universe of investors
-        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=2.360) for _ in range(self.num_investors)]
+        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=0.236) for _ in range(self.num_investors)]
 
         # creating the universe of traders
         self.traders = [LoanTrader.LoanTraderObj(max_investors=self.num_investors // self.num_traders, broker_fee=self.broker_fee) for _ in
@@ -397,6 +397,54 @@ class loanMarket:
 
         st.pyplot(fig)
 
+
+    def plot_score_allocation(self):
+
+        num_investors = len(self.investors)
+
+        # Extracting the capital, current scores, and target scores
+        capital = np.array([investor.capital for investor in self.investors])
+        current_scores = np.array([investor.current_score for investor in self.investors])
+        target_scores = np.array([investor.target_score for investor in self.investors])
+
+        # Sorting the scores and capital for a more organized visualization
+        indices = np.argsort(target_scores)
+        current_scores_sorted = current_scores[indices]
+        target_scores_sorted = target_scores[indices]
+        capital_sorted = capital[indices]
+
+        # Calculating the total capital above and below target score
+        total_capital_above_target = sum(
+            capital[i] for i in range(num_investors) if current_scores[i] > target_scores[i])
+        total_capital_below_target = sum(
+            capital[i] for i in range(num_investors) if current_scores[i] < target_scores[i])
+
+        # Using 4 streamlit columns to display the metrics
+        col1, col2 = st.columns(2)
+        col1.metric(label = "Number of investors above target score: ", value = sum(current_scores > target_scores))
+        col2.metric(label = "Number of investors below target score: ", value = sum(current_scores < target_scores))
+        col1.metric(label = "Total capital above target score: ", value = format(total_capital_above_target, ',.2f'))
+        col2.metric(label = "Total capital below target score: ", value = format(total_capital_below_target, ',.2f'))
+
+        # Normalize capital for scatter plot size (adjust scale factor as needed)
+        size_factor = 0.000001  # Adjust this factor to scale the sizes appropriately
+        sizes = capital_sorted * size_factor
+
+        # Creating the scatter plot with connected lines
+        ax1 = plt.figure(figsize=(12, 6))
+        for i in range(len(self.investors)):
+            plt.plot([i, i], [current_scores_sorted[i], target_scores_sorted[i]], color='purple')  # lines
+        plt.scatter(range(num_investors), current_scores_sorted, s=sizes, color='blue', label='Current Score', zorder=5)
+        plt.scatter(range(num_investors), target_scores_sorted, color='red', label='Target Score', zorder=5)
+
+        plt.ylabel("Score")
+        plt.xlabel("Investor")
+        plt.title("Investor Current Score and Target Score")
+        plt.legend()
+        plt.grid(True)
+
+        st.pyplot(ax1)
+
 markettrial = loanMarket()
 markettrial.initialize()
 
@@ -412,6 +460,7 @@ for _ in range(cycles):
 cycle_bar.empty()
 
 markettrial.print_parameter_values()
+markettrial.plot_score_allocation()
 markettrial.plot_portfolio_values()
 markettrial.plot_capital_values()
 markettrial.plot_sale_prices()
