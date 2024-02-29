@@ -69,14 +69,15 @@ class loanMarket:
 
         self.loans.extend(new_loans)
 
-        print("Number of loans in cycle {}: ".format(self.cycle), len([loan for loan in self.loans if loan.maturity_bool == False]))
-
         for loan in self.loans:
             # loans are updated independent of investors
             loan.update(self.cycle + 1, float_interest=self.interest_rate)
+
         for investor in self.investors:
             # investors are updated based on the loans they hold
             investor.update(cycle=self.cycle + 1)
+
+
         for trader in self.traders:
             # traders are updated based on the investors they hold
             trader.update(cycle=self.cycle + 1)
@@ -103,23 +104,54 @@ class loanMarket:
         return avg_portfolio_values
 
     def plot_portfolio_values(self):
-        ax = plt.figure()
-        # Plot the portfolio value for each investor
-        for investor in self.investors:
-            plt.plot(investor.portfolio_values)
-        plt.title('Portfolio Value')
-        plt.xlabel('Cycle')
-        plt.ylabel('Value')
-        st.pyplot(ax)
 
-    def plot_capital_values(self):
-        ax = plt.figure()
+        # plotting portfolio values and interest received each as subplots
+        fig, axs = plt.subplots(4, 1, figsize=(8, 16))
+
+        # Plot the portfolio values
         for investor in self.investors:
-            plt.plot(investor.capital_history)
-        plt.title('Capital Value')
-        plt.xlabel('Cycle')
-        plt.ylabel('Value')
-        st.pyplot(ax)
+            axs[0].plot(investor.portfolio_values)
+        axs[0].set_title('Portfolio Value')
+        axs[0].set_xlabel('Cycle')
+        axs[0].set_ylabel('Value')
+
+        # Plot the capital values
+        for investor in self.investors:
+            axs[1].plot(investor.capital_history)
+        axs[1].set_title('Capital Value')
+        axs[1].set_xlabel('Cycle')
+        axs[1].set_ylabel('Value')
+
+
+        # Plot the interest received
+        for investor in self.investors:
+            axs[2].plot(investor.interest_received)
+        axs[2].set_title('Interest Received')
+        axs[2].set_xlabel('Cycle')
+        axs[2].set_ylabel('Value')
+
+        # Plot loan fair values
+        for investor in self.investors:
+            axs[3].plot(investor.loan_fair_values)
+        axs[3].set_title('Loan Fair Values')
+        axs[3].set_xlabel('Cycle')
+        axs[3].set_ylabel('Value')
+
+        plt.tight_layout()
+        plt.show()
+
+        st.pyplot(fig)
+
+
+    def plot_fair_values(self):
+
+        ax1 = plt.figure()
+        # plotting the average fair value of all loans in the market
+        for loan in self.loans():
+            plt.plot(loan.fair_value_history)
+        plt.title('Loan Fair Values')
+
+        st.pyplot(ax1)
 
     def plot_sale_prices(self):
         ax = plt.figure()
@@ -432,7 +464,7 @@ class loanMarket:
         num_investors = len(self.investors)
 
         # Extracting the capital, current scores, and target scores
-        capital = np.array([investor.capital for investor in self.investors])
+        capital = np.array([investor.portfolio_values[-1] for investor in self.investors])
         current_scores = np.array([investor.current_score for investor in self.investors])
         target_scores = np.array([investor.target_score for investor in self.investors])
 
@@ -526,7 +558,7 @@ time_display.empty()
 markettrial.plot_score_allocation(before_after="After")
 markettrial.print_parameter_values()
 markettrial.plot_portfolio_values()
-markettrial.plot_capital_values()
+markettrial.plot_fair_values()
 markettrial.get_winners_losers_capital(plot_values=True)
 markettrial.get_winners_losers_portfolio_value()
 markettrial.plot_trader_revenue()

@@ -54,7 +54,7 @@ class LoanInvestorObj:
         float: Initial capital.
         """
 
-        random_capital = np.round(np.random.pareto(2) * 50e6 + 50e6)
+        random_capital = np.round(np.random.pareto(2) * 50e5 + 50e6)
         return random_capital
 
     def initialize_portfolio(self, available_loans):
