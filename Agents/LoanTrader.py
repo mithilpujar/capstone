@@ -17,6 +17,7 @@ class LoanTraderObj:
         self.interest_revenue_history = []
         self.revenue_history = []
         self.cycle_broker_revenue = 0
+        self.num_sales = 0
 
     def add_investors(self, investors):
         for investor in investors:
@@ -27,8 +28,8 @@ class LoanTraderObj:
                 self.max_investors_reached = True
                 pass
 
-    def update_loans_for_sale(self, available_loans):
-        for loan in available_loans:
+    def update_loans_for_sale(self, new_loans):
+        for loan in new_loans:
             self.loans_for_sale.append(loan)
             loan.update_owner(self)
 
@@ -111,6 +112,7 @@ class LoanTraderObj:
                 top_bidder['investor'].buy_loan(loan, broker_fee_amt)
                 loans_sold.append(loan)
                 purchased = True
+                self.num_sales += 1
 
             if show_bids:
                 print("Purchased: ", purchased)

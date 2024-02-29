@@ -7,11 +7,14 @@ import numpy as np
 import streamlit as st
 import matplotlib as mpl
 from matplotlib.ticker import FuncFormatter
-
+import warnings
+import time
 
 
 class loanMarket:
-    def __init__(self):
+    def __init__(self, cycles):
+
+        warnings.filterwarnings("ignore")
 
         self.cycle = 0
         self.num_loans = st.number_input('Number of loans', min_value=1, max_value=100000, value=100, step=10)
@@ -23,10 +26,15 @@ class loanMarket:
         self.default_rate = st.slider('Default Rate', min_value=1, max_value=300, value=100, step=10)
         self.reserve_price = st.slider('Reserve Price', min_value=0.01, max_value=1.0, value=0.8, step=0.01)
         self.recovery_value = st.slider('Recovery Value', min_value=1, max_value=100, value=40, step=1)
+        self.new_loans_slider = st.slider('Number of new loans', min_value=1, max_value=100, value=10, step=1)
+
 
 
         # creating the universe of loans
         self.loans = [Loan.LoanObj(float_interest=self.interest_rate, default_rate=301 - self.default_rate, reserve_price=self.reserve_price, recovery_value=self.recovery_value) for _ in range(self.num_loans)]
+
+        # creating all new loans that will be used in the simulation
+        self.new_loans = [[Loan.LoanObj(float_interest=self.interest_rate, default_rate=301 - self.default_rate, reserve_price=self.reserve_price, recovery_value=self.recovery_value) for _ in range(int(self.new_loans_slider/100 * self.num_loans))] for _ in range(cycles)]
 
         # creating the universe of investors
         self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=0.236) for _ in range(self.num_investors)]
@@ -48,9 +56,20 @@ class loanMarket:
 
     def update(self):
 
-        # creating new loans
-        new_loans = [Loan.LoanObj(float_interest=self.interest_rate, default_rate=301 - self.default_rate) for _ in range(self.num_loans//100)]
+        # getting this cycles new loans
+        new_loans = self.new_loans[self.cycle]
+
+        # splitting the list of new loans into sets to be allocated to individual traders
+        split_new_loans = [new_loans[i:i + len(new_loans) // self.num_traders] for i in range(0, len(new_loans), len(new_loans) // self.num_traders)]
+
+        for loan in new_loans:
+            loan.starting_cycle = self.cycle
+            loan.ending_cycle = loan.starting_cycle + loan.maturity
+
+
         self.loans.extend(new_loans)
+
+        print("Number of loans in cycle {}: ".format(self.cycle), len([loan for loan in self.loans if loan.maturity_bool == False]))
 
         for loan in self.loans:
             # loans are updated independent of investors
@@ -61,7 +80,7 @@ class loanMarket:
         for trader in self.traders:
             # traders are updated based on the investors they hold
             trader.update(cycle=self.cycle + 1)
-            trader.update_loans_for_sale(new_loans)
+            trader.update_loans_for_sale(split_new_loans[self.traders.index(trader)])
 
         self.cycle += 1
 
@@ -346,16 +365,22 @@ class loanMarket:
         total_market_values = []
         total_capitals = []
         total_portfolio_values = []
+        num_loans_over_time = []
 
-        # Calculate the total market value for each cycle
+
+        # Calculate the total market value for each cycle and number of loans in each cycle
         for cycle in range(self.cycle):
             cycle_market_value = 0
+            num_loans = self.num_loans
             for loan in self.loans:
                 # Check if the loan has a fair value for the current cycle
                 if cycle < len(loan.fair_value_history):
                     cycle_market_value += ((loan.fair_value_history[cycle])/100) * loan.size
+                if loan.maturity_bool == False:
+                    num_loans += 1
 
             total_market_values.append(cycle_market_value)
+            num_loans_over_time.append(num_loans)
 
         # Calculate the total capital for each cycle
         # Assuming all investors have a capital history for each cycle
@@ -370,25 +395,31 @@ class loanMarket:
             total_portfolio_values.append(cycle_portfolio_value)
 
         # Plotting
-        fig, axs = plt.subplots(3, 1, figsize=(10, 8))  # Create a figure and two subplots
+        fig, axs = plt.subplots(4, 1, figsize=(12, 8))  # Create a figure and two subplots
+
+        # Plot number of loans over time
+        axs[0].plot(num_loans_over_time)
+        axs[0].set_title('Number of Loans Over Time')
+        axs[0].set_xlabel('Cycle')
+        axs[0].set_ylabel('Number of Loans')
 
         # Plot total market value
-        axs[0].plot(total_market_values)
-        axs[0].set_title('Total Market Value')
-        axs[0].set_xlabel('Cycle')
-        axs[0].set_ylabel('Value')
-
-        # Plot total capital
-        axs[1].plot(total_capitals)
-        axs[1].set_title('Total Capital')
+        axs[1].plot(total_market_values)
+        axs[1].set_title('Total Market Value')
         axs[1].set_xlabel('Cycle')
         axs[1].set_ylabel('Value')
 
-        # Plot total portfolio value
-        axs[2].plot(total_portfolio_values)
-        axs[2].set_title('Total Portfolio Value')
+        # Plot total capital
+        axs[2].plot(total_capitals)
+        axs[2].set_title('Total Capital')
         axs[2].set_xlabel('Cycle')
         axs[2].set_ylabel('Value')
+
+        # Plot total portfolio value
+        axs[3].plot(total_portfolio_values)
+        axs[3].set_title('Total Portfolio Value')
+        axs[3].set_xlabel('Cycle')
+        axs[3].set_ylabel('Value')
 
         plt.tight_layout()
         plt.ticklabel_format(style='plain', axis='y')
@@ -397,9 +428,7 @@ class loanMarket:
 
         st.pyplot(fig)
 
-
-    def plot_score_allocation(self):
-
+    def plot_score_allocation(self, before_after):
         num_investors = len(self.investors)
 
         # Extracting the capital, current scores, and target scores
@@ -419,55 +448,92 @@ class loanMarket:
         total_capital_below_target = sum(
             capital[i] for i in range(num_investors) if current_scores[i] < target_scores[i])
 
-        # Using 4 streamlit columns to display the metrics
-        col1, col2 = st.columns(2)
-        col1.metric(label = "Number of investors above target score: ", value = sum(current_scores > target_scores))
-        col2.metric(label = "Number of investors below target score: ", value = sum(current_scores < target_scores))
-        col1.metric(label = "Total capital above target score: ", value = format(total_capital_above_target, ',.2f'))
-        col2.metric(label = "Total capital below target score: ", value = format(total_capital_below_target, ',.2f'))
-
         # Normalize capital for scatter plot size (adjust scale factor as needed)
         size_factor = 0.000001  # Adjust this factor to scale the sizes appropriately
         sizes = capital_sorted * size_factor
 
         # Creating the scatter plot with connected lines
-        ax1 = plt.figure(figsize=(12, 6))
+        fig, ax = plt.subplots(figsize=(12, 6))
         for i in range(len(self.investors)):
             plt.plot([i, i], [current_scores_sorted[i], target_scores_sorted[i]], color='purple')  # lines
-        plt.scatter(range(num_investors), current_scores_sorted, s=sizes, color='blue', label='Current Score', zorder=5)
+        plt.scatter(range(num_investors), current_scores_sorted, s=sizes, color='blue', label='Current Score',
+                    zorder=5)
         plt.scatter(range(num_investors), target_scores_sorted, color='red', label='Target Score', zorder=5)
+
+        # Annotations for metrics
+        plt.text(0.02, 0.95, f'Number of investors above target score: {sum(current_scores > target_scores)}',
+                 transform=ax.transAxes)
+        plt.text(0.02, 0.90, f'Number of investors below target score: {sum(current_scores < target_scores)}',
+                 transform=ax.transAxes)
+        plt.text(0.02, 0.85, f'Total capital above target score: {total_capital_above_target:,.2f}',
+                 transform=ax.transAxes)
+        plt.text(0.02, 0.80, f'Total capital below target score: {total_capital_below_target:,.2f}',
+                 transform=ax.transAxes)
 
         plt.ylabel("Score")
         plt.xlabel("Investor")
-        plt.title("Investor Current Score and Target Score")
+        plt.title("Investor Current Score and Target Score " + before_after)
         plt.legend()
         plt.grid(True)
+        plt.show()
+        plt.figure()
 
-        st.pyplot(ax1)
+        st.pyplot(fig)
 
-markettrial = loanMarket()
+cycles = st.slider("Number of cycles", 0, 500, 200)
+
+markettrial = loanMarket(cycles=cycles)
 markettrial.initialize()
 
-cycles = st.slider("Number of cycles", 0, 500, 100)
+import streamlit as st
+from datetime import datetime, timezone
 
+# Initialize the progress bar
+progress_bar = st.progress(0)
+
+# Placeholder for dynamic text, such as time per update
+time_display = st.empty()
+
+# Placeholder for progress text
+progress_text_display = st.empty()
 progress_text = "Simulation in progress. Please wait."
-cycle_bar = st.progress(0, text=progress_text)
+progress_text_display.text(progress_text)
 
-for _ in range(cycles):
-    cycle_bar.progress(_/cycles, text=progress_text)
+markettrial.plot_score_allocation(before_after="Before")
+
+# For loop to simulate progress
+for i in range(cycles):
+    start_time = time.time()  # Start time of the update
+
+    # Simulate update (your actual update logic here)
     markettrial.update()
 
-cycle_bar.empty()
+    end_time = time.time()  # End time of the update
+    update_duration = end_time - start_time  # Calculate the duration of the update
 
+    # Update the progress bar
+    progress_bar.progress((i + 1) / cycles)
+
+    # Update the time display with the duration of the last update
+    time_display.text(f"Last update took: {update_duration:.2f} seconds")
+
+# Clear the progress bar and text once the loop is complete
+progress_bar.empty()
+progress_text_display.empty()
+time_display.empty()
+
+
+markettrial.plot_score_allocation(before_after="After")
 markettrial.print_parameter_values()
-markettrial.plot_score_allocation()
 markettrial.plot_portfolio_values()
 markettrial.plot_capital_values()
-markettrial.plot_sale_prices()
 markettrial.get_winners_losers_capital(plot_values=True)
 markettrial.get_winners_losers_portfolio_value()
 markettrial.plot_trader_revenue()
 
 markettrial.analyze_top_bottom_investor()
 markettrial.analyze_loan_market()
+
 markettrial.plot_total_market_value(cycles)
+
+markettrial.plot_sale_prices()
