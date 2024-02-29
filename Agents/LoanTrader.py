@@ -109,7 +109,9 @@ class LoanTraderObj:
                 loan.sale_price_history.append(top_bidder['bid_price'])
                 broker_fee_amt = (self.broker_fee/100)*(top_bidder['bid_price']/100)*loan.size
                 self.cycle_broker_revenue += broker_fee_amt
+
                 top_bidder['investor'].buy_loan(loan, broker_fee_amt)
+
                 loans_sold.append(loan)
                 purchased = True
                 self.num_sales += 1

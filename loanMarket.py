@@ -37,7 +37,7 @@ class loanMarket:
         self.new_loans = [[Loan.LoanObj(float_interest=self.interest_rate, default_rate=301 - self.default_rate, reserve_price=self.reserve_price, recovery_value=self.recovery_value) for _ in range(int(self.new_loans_slider/100 * self.num_loans))] for _ in range(cycles)]
 
         # creating the universe of investors
-        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=0.236) for _ in range(self.num_investors)]
+        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=0.536) for _ in range(self.num_investors)]
 
         # creating the universe of traders
         self.traders = [LoanTrader.LoanTraderObj(max_investors=self.num_investors // self.num_traders, broker_fee=self.broker_fee) for _ in
@@ -147,7 +147,7 @@ class loanMarket:
 
         ax1 = plt.figure()
         # plotting the average fair value of all loans in the market
-        for loan in self.loans():
+        for loan in self.loans:
             plt.plot(loan.fair_value_history)
         plt.title('Loan Fair Values')
 
