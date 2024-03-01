@@ -55,7 +55,7 @@ class loanMarket:
         for trader in self.traders:
             trader.add_investors(self.investors)
 
-    def update(self):
+    def update(self, last_issue_cycle):
 
         # getting this cycles new loans
         new_loans = self.new_loans[self.cycle]
@@ -90,7 +90,8 @@ class loanMarket:
         for trader in self.traders:
             # traders are updated based on the investors they hold
             trader.update(cycle=self.cycle + 1)
-            trader.update_loans_for_sale(split_new_loans[self.traders.index(trader)])
+            if self.cycle < last_issue_cycle:
+                trader.update_loans_for_sale(split_new_loans[self.traders.index(trader)])
         end_time_traders = time.time()
         traders_update_time = end_time_traders - start_time_traders
         trader_time_display.text(f"Last traders update took: {traders_update_time:.2f} seconds")
@@ -529,64 +530,76 @@ class loanMarket:
 
         st.pyplot(fig)
 
-cycles = st.slider("Number of cycles", 0, 500, 200)
 
+# creating sliders for the user to input the parameters
+cycles = st.slider("Number of cycles", 0, 500, 200)
+last_issue_cycle = st.number_input("Last issue cycle", 0, cycles, cycles - 100)
+
+#initializing the market
 markettrial = loanMarket(cycles=cycles)
 markettrial.initialize()
 
-import streamlit as st
-from datetime import datetime, timezone
+# creating a proceed button to run the simulation when we want
+proceed = st.button("Proceed")
 
-# Initialize the progress bar
-progress_bar = st.progress(0)
+if proceed:
+    import streamlit as st
+    from datetime import datetime, timezone
 
-# Dynamic text
-time_display = st.empty()
-loan_time_display = st.empty()
-investor_time_display = st.empty()
-trader_time_display = st.empty()
+    # Initialize the progress bar
+    progress_bar = st.progress(0)
 
-# Placeholder for progress text
-progress_text_display = st.empty()
-progress_text = "Simulation in progress. Please wait."
-progress_text_display.text(progress_text)
+    # Dynamic text
+    cycle_display = st.empty()
+    time_display = st.empty()
+    loan_time_display = st.empty()
+    investor_time_display = st.empty()
+    trader_time_display = st.empty()
 
-markettrial.plot_score_allocation(before_after="Before")
+    # Placeholder for progress text
+    progress_text_display = st.empty()
+    progress_text = "Simulation in progress. Please wait."
+    progress_text_display.text(progress_text)
 
-# For loop to simulate progress
-for i in range(cycles):
-    start_time = time.time()  # Start time of the update
-    markettrial.update()
-    end_time = time.time()  # End time of the update
+    markettrial.plot_score_allocation(before_after="Before")
 
-    update_duration = end_time - start_time  # Calculate the duration of the update
+    # For loop to simulate progress
+    for i in range(cycles):
+        start_time = time.time()  # Start time of the update
+        markettrial.update(last_issue_cycle=last_issue_cycle)
+        end_time = time.time()  # End time of the update
 
-    # Update the progress bar
-    progress_bar.progress((i + 1) / cycles)
+        update_duration = end_time - start_time  # Calculate the duration of the update
 
-    # Update the time display with the duration of the last update
-    time_display.text(f"Last update took: {update_duration:.2f} seconds")
+        # Update the progress bar
+        progress_bar.progress((i + 1) / cycles)
 
-# Clear the progress bar and text once the loop is complete
-progress_bar.empty()
-progress_text_display.empty()
-time_display.empty()
-loan_time_display.empty()
-trader_time_display.empty()
-investor_time_display.empty()
+        # updating the cycle display
+        cycle_display.text(f"Cycle: {i + 1} of {cycles}")
 
+        # Update the time display with the duration of the last update
+        time_display.text(f"Last update took: {update_duration:.2f} seconds")
 
-markettrial.plot_score_allocation(before_after="After")
-markettrial.print_parameter_values()
-markettrial.plot_portfolio_values()
-markettrial.plot_fair_values()
-markettrial.get_winners_losers_capital(plot_values=True)
-markettrial.get_winners_losers_portfolio_value()
-markettrial.plot_trader_revenue()
+    # Clear the progress bar and text once the loop is complete
+    progress_bar.empty()
+    progress_text_display.empty()
+    cycle_display.empty()
+    time_display.empty()
+    loan_time_display.empty()
+    trader_time_display.empty()
+    investor_time_display.empty()
 
-markettrial.analyze_top_bottom_investor()
-markettrial.analyze_loan_market()
+    markettrial.plot_score_allocation(before_after="After")
+    markettrial.print_parameter_values()
+    markettrial.plot_portfolio_values()
+    markettrial.plot_fair_values()
+    markettrial.get_winners_losers_capital(plot_values=True)
+    markettrial.get_winners_losers_portfolio_value()
+    markettrial.plot_trader_revenue()
 
-markettrial.plot_total_market_value(cycles)
+    markettrial.analyze_top_bottom_investor()
+    markettrial.analyze_loan_market()
 
-markettrial.plot_sale_prices()
+    markettrial.plot_total_market_value(cycles)
+
+    markettrial.plot_sale_prices()

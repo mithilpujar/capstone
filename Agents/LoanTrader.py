@@ -34,18 +34,29 @@ class LoanTraderObj:
         for loan in new_loans:
             self.loans_for_sale.append(loan)
             loan.update_owner(self)
+            new_loans.remove(loan)
 
     def collect_loans_for_sale(self, print_outputs = False, num_investors = 1):
 
         # method to collect the loans for sale from the investors
         investors_with_loans_for_sale = [investor for investor in self.investors if investor.get_loan_to_sell() is not None]
 
+        if investors_with_loans_for_sale == []:
+            return
+
+        # shuffling the list of investors with loans for sale
+        investors_with_loans_for_sale = np.random.permutation(investors_with_loans_for_sale)
+
         for investor in investors_with_loans_for_sale:
             # check the loan isn't already for sale
             loan = investor.get_loan_to_sell()
+
             if loan is not None and loan not in self.loans_for_sale:
                 # dropping none from the list of loans for sale
-                self.loans_for_sale.append(loan)
+                if len(self.loans_for_sale) < 500:
+                    self.loans_for_sale.append(loan)
+                else:
+                    break
 
 
         if print_outputs:
