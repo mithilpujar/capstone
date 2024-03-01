@@ -42,8 +42,10 @@ class LoanInvestorObj:
         self.sold_loans = []
         self.purchased_loans = []
 
-        # this holds the intra-update capital change
+        # this holds the intra-update capital change and loans to buy
         self.capital_change = 0
+        self.loans_to_buy = []
+
 
     @staticmethod
     def generate_initial_capital():
@@ -94,14 +96,14 @@ class LoanInvestorObj:
 
             # Hypothetical Min and Max for normalization
             Min = 0  # Assuming this is the lowest possible score
-            Max = 100  # Assuming this is the highest possible score
+            Max = max(100, raw_score)  # Assuming this is the highest possible score
 
             # Normalize the score
             normalized_score = ((raw_score - Min) / (Max - Min))
 
             self.current_score = normalized_score if normalized == True else raw_score
 
-    def receive_interest(self):
+    def receive_interest(self, float_interest):
         """
         This is the procedure every cycle for the investor to receive interest on their loans.
         :param float_interest: The floating base rate for interest (think SOFR)
@@ -111,15 +113,16 @@ class LoanInvestorObj:
 
         for loan in self.portfolio:
             if loan.maturity_bool:
-                self.capital += loan.size
+                self.capital_change += loan.size
                 self.matured_loans.append(loan)
                 self.portfolio.remove(loan)
 
             else:
-                cycle_interest = (loan.interest_rate / 12) * loan.size
+                cycle_interest = ((loan.interest_rate + float_interest)/ 12) * loan.size
                 total_interest += cycle_interest
 
         self.capital_change += total_interest
+
         self.interest_received.append(total_interest)
 
     def get_loan_to_sell(self, num_select=1, reserve_price = 0.8):
@@ -153,6 +156,7 @@ class LoanInvestorObj:
         loan_to_sell.reserve_price = reserve_price*loan_to_sell.sale_price_history[-1] if loan_to_sell.sale_price_history[-1] is not None else reserve_price * loan_to_sell.market_price
 
         self.loans_for_sale.append(loan_to_sell)
+
         return loan_to_sell
 
     def get_bid_price(self, loan, pricing_method = 'portfolio_included'):
@@ -195,18 +199,21 @@ class LoanInvestorObj:
         return bid_price
 
     def buy_loan(self, loan_to_purchase, broker_fee):
-        # method for the investor to buy the loan after they have won an auction
-        # updates the investor's portfolio and capital
+
+        # clearing the sale for loans called from the trader method
+        # since it's not called internally we change self.capital directly
+
         self.portfolio.append(loan_to_purchase)
         self.purchased_loans.append(loan_to_purchase)
-        self.capital_change -= loan_to_purchase.size * (loan_to_purchase.sale_price_history[-1] / 100)
-        self.capital_change -= broker_fee
 
-        # updating the loan's owner
+
         loan_to_purchase.update_owner(self)
+        self.capital -= loan_to_purchase.size * (loan_to_purchase.sale_price_history[-1] /100)
+        self.capital -= broker_fee
 
 
-    def update(self, cycle=None):
+
+    def update(self, cycle=None, float_interest = 0.05):
         """
         Updates the investor's state for a given cycle.
 
@@ -214,12 +221,12 @@ class LoanInvestorObj:
         - float_interest (float, optional): The floating base rate for interest. Defaults to 0.
         - cycle (int, optional): The current cycle. Not currently used.
         """
-
+        # adding in holders for loans to buy and capital change
         self.capital_change = 0
 
         self.current_cycle = cycle
 
-        self.receive_interest()
+        self.receive_interest(float_interest)
 
         # removing matured loans from portfolio
         just_matured = [loan for loan in self.portfolio if loan.maturity_bool]
@@ -228,10 +235,6 @@ class LoanInvestorObj:
         self.portfolio = [loan for loan in self.portfolio if not loan.maturity_bool]
 
         self.loan_fair_values.append(np.sum([((loan.fair_value / 100) * loan.size) for loan in self.portfolio if not loan.maturity_bool]))
-
-        matured_loans_cash = np.sum([((loan.fair_value / 100) * loan.size) for loan in just_matured])
-
-        self.capital_change += matured_loans_cash
 
         self.capital += self.capital_change
 

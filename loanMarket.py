@@ -9,6 +9,7 @@ import matplotlib as mpl
 from matplotlib.ticker import FuncFormatter
 import warnings
 import time
+import pickle
 
 
 class loanMarket:
@@ -17,7 +18,7 @@ class loanMarket:
         warnings.filterwarnings("ignore")
 
         self.cycle = 0
-        self.num_loans = st.number_input('Number of loans', min_value=1, max_value=100000, value=100, step=10)
+        self.num_loans = st.number_input('Number of loans', min_value=1, max_value=100000, value=1000, step=10)
         self.num_investors = st.number_input('Number of investors', min_value=1, max_value=1000, value=100, step=10)
         self.num_traders = st.number_input('Number of traders', min_value=1, max_value = self.num_investors, value=10, step=1)
         self.interest_rate = st.slider('Interest Rate', min_value=0.00, max_value=0.15, value=0.05, step=0.01)
@@ -26,7 +27,7 @@ class loanMarket:
         self.default_rate = st.slider('Default Rate', min_value=1, max_value=300, value=100, step=10)
         self.reserve_price = st.slider('Reserve Price', min_value=0.01, max_value=1.0, value=0.8, step=0.01)
         self.recovery_value = st.slider('Recovery Value', min_value=1, max_value=100, value=40, step=1)
-        self.new_loans_slider = st.slider('Number of new loans', min_value=1, max_value=100, value=10, step=1)
+        self.new_loans_slider = st.slider('Number of new loans', min_value=1, max_value=10, value=5, step=1)
 
 
 
@@ -37,7 +38,7 @@ class loanMarket:
         self.new_loans = [[Loan.LoanObj(float_interest=self.interest_rate, default_rate=301 - self.default_rate, reserve_price=self.reserve_price, recovery_value=self.recovery_value) for _ in range(int(self.new_loans_slider/100 * self.num_loans))] for _ in range(cycles)]
 
         # creating the universe of investors
-        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=0.536) for _ in range(self.num_investors)]
+        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=0.136) for _ in range(self.num_investors)]
 
         # creating the universe of traders
         self.traders = [LoanTrader.LoanTraderObj(max_investors=self.num_investors // self.num_traders, broker_fee=self.broker_fee) for _ in
@@ -69,19 +70,33 @@ class loanMarket:
 
         self.loans.extend(new_loans)
 
+        start_time_loans = time.time()
         for loan in self.loans:
             # loans are updated independent of investors
             loan.update(self.cycle + 1, float_interest=self.interest_rate)
+        end_time_loans = time.time()
+        loan_update_time = end_time_loans - start_time_loans
+        loan_time_display.text(f"Last loans update took: {loan_update_time:.2f} seconds")
 
+        start_time_investors = time.time()
         for investor in self.investors:
             # investors are updated based on the loans they hold
-            investor.update(cycle=self.cycle + 1)
+            investor.update(cycle=self.cycle + 1, float_interest=self.interest_rate)
+        end_time_investors = time.time()
+        investors_update_time = end_time_investors - start_time_investors
+        investor_time_display.text(f"Last investors update took: {investors_update_time:.2f} seconds")
 
-
+        start_time_traders = time.time()
         for trader in self.traders:
             # traders are updated based on the investors they hold
             trader.update(cycle=self.cycle + 1)
             trader.update_loans_for_sale(split_new_loans[self.traders.index(trader)])
+        end_time_traders = time.time()
+        traders_update_time = end_time_traders - start_time_traders
+        trader_time_display.text(f"Last traders update took: {traders_update_time:.2f} seconds")
+
+
+
 
         self.cycle += 1
 
@@ -195,21 +210,21 @@ class loanMarket:
 
         for investor in self.investors:
             if investor.capital_history:
-                capital_diff = investor.capital_history[-1] - investor.capital_history[0]
+                capital_diff = investor.capital_history[-1] - investor.capital_history[1]
                 if capital_diff > 0:
                     winners.append(investor)
                 else:
                     losers.append(investor)
 
         ax1 = plt.figure()
-        plt.scatter([investor.id for investor in winners], sorted([investor.capital_history[-1] - investor.capital_history[0] for investor in winners]), label='Winners', color='g')
+        plt.scatter([investor.id for investor in winners], sorted([investor.capital_history[-1] - investor.capital_history[1] for investor in winners]), label='Winners', color='g')
         plt.title('Plot of {} Capital Winners'.format(len(winners)))
         plt.xticks(visible=False)
         plt.legend()
         st.pyplot(ax1)
 
         ax2 = plt.figure()
-        plt.scatter([investor.id for investor in losers], sorted([investor.capital_history[-1] - investor.capital_history[0] for investor in losers]), label='Losers', color='r')
+        plt.scatter([investor.id for investor in losers], sorted([investor.capital_history[-1] - investor.capital_history[1] for investor in losers]), label='Losers', color='r')
         plt.title('Plot of {} Capital Losers'.format(len(losers)))
         plt.xticks(visible=False)
         plt.legend()
@@ -414,6 +429,7 @@ class loanMarket:
             total_market_values.append(cycle_market_value)
             num_loans_over_time.append(num_loans)
 
+
         # Calculate the total capital for each cycle
         # Assuming all investors have a capital history for each cycle
         for cycle in range(self.cycle):
@@ -437,7 +453,7 @@ class loanMarket:
 
         # Plot total market value
         axs[1].plot(total_market_values)
-        axs[1].set_title('Total Market Value')
+        axs[1].set_title('Total Market Fair Values')
         axs[1].set_xlabel('Cycle')
         axs[1].set_ylabel('Value')
 
@@ -456,6 +472,7 @@ class loanMarket:
         plt.tight_layout()
         plt.ticklabel_format(style='plain', axis='y')
         axs[2].get_yaxis().set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
+        axs[3].get_yaxis().set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}'))
         plt.show()
 
         st.pyplot(fig)
@@ -523,8 +540,11 @@ from datetime import datetime, timezone
 # Initialize the progress bar
 progress_bar = st.progress(0)
 
-# Placeholder for dynamic text, such as time per update
+# Dynamic text
 time_display = st.empty()
+loan_time_display = st.empty()
+investor_time_display = st.empty()
+trader_time_display = st.empty()
 
 # Placeholder for progress text
 progress_text_display = st.empty()
@@ -536,11 +556,9 @@ markettrial.plot_score_allocation(before_after="Before")
 # For loop to simulate progress
 for i in range(cycles):
     start_time = time.time()  # Start time of the update
-
-    # Simulate update (your actual update logic here)
     markettrial.update()
-
     end_time = time.time()  # End time of the update
+
     update_duration = end_time - start_time  # Calculate the duration of the update
 
     # Update the progress bar
@@ -553,6 +571,9 @@ for i in range(cycles):
 progress_bar.empty()
 progress_text_display.empty()
 time_display.empty()
+loan_time_display.empty()
+trader_time_display.empty()
+investor_time_display.empty()
 
 
 markettrial.plot_score_allocation(before_after="After")

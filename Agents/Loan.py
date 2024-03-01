@@ -94,7 +94,7 @@ class LoanObj:
         size_effect = beta3 * self.size
 
         # Intermediate price
-        intermediate_price = np.random.normal(100, 0.5) + pd_effect + ir_effect + size_effect
+        intermediate_price = np.random.normal(100, 0.75) + pd_effect + ir_effect + size_effect
 
         # Maturity effect to bring price closer to par value for lower maturities
         k = 0.5  # decay constant
