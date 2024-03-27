@@ -114,6 +114,9 @@ class LoanTraderObj:
                 if loan.current_owner.id[0] == 'I':
                     loan.current_owner.sold_loans.append(loan)
                     loan.current_owner.portfolio.remove(loan)
+                elif loan.current_owner.id[0] == 'T':
+                    loan.current_owner.loans_for_sale.remove(loan)
+
 
 
                 # updating the loan's owner
@@ -148,7 +151,7 @@ class LoanTraderObj:
         # purging the loans for sale book if the loan has matured
         self.loans_for_sale = [loan for loan in self.loans_for_sale if not loan.maturity_bool]
 
-        print("Number of loans for sale: ", len(self.loans_for_sale))
+        #print("Number of loans for sale: ", len(self.loans_for_sale))
 
         # now we start conducting the auction
         for loan in self.loans_for_sale:
@@ -161,11 +164,14 @@ class LoanTraderObj:
             for investor in available_bidders:
                 bid = investor.get_bid_price(loan)
 
+
                 if bid > top_bidder['bid_price']:
                     top_bidder['investor'] = investor
                     top_bidder['bid_price'] = bid
 
 
+
+            #print('Investor {} bids {} for loan {}'.format(top_bidder['investor'].id[:5], top_bidder['bid_price'], loan.id[:5]))
 
             # updating the loan market price history
             loan.market_price_history.append(top_bidder['bid_price'])

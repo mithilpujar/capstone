@@ -11,6 +11,8 @@ import warnings
 import time
 import pickle
 
+# clearing the cache
+loanMarket = None
 
 class loanMarket:
     def __init__(self, cycles):
@@ -38,7 +40,7 @@ class loanMarket:
         self.new_loans = [[Loan.LoanObj(float_interest=self.interest_rate, default_rate=301 - self.default_rate, reserve_price=self.reserve_price, recovery_value=self.recovery_value) for _ in range(int(self.new_loans_slider/100 * self.num_loans))] for _ in range(cycles)]
 
         # creating the universe of investors
-        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=0.136) for _ in range(self.num_investors)]
+        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=1.162) for _ in range(self.num_investors)]
 
         # creating the universe of traders
         self.traders = [LoanTrader.LoanTraderObj(max_investors=self.num_investors // self.num_traders, broker_fee=self.broker_fee) for _ in
@@ -95,9 +97,6 @@ class loanMarket:
         end_time_traders = time.time()
         traders_update_time = end_time_traders - start_time_traders
         trader_time_display.text(f"Last traders update took: {traders_update_time:.2f} seconds")
-
-
-
 
         self.cycle += 1
 
@@ -414,6 +413,7 @@ class loanMarket:
         total_capitals = []
         total_portfolio_values = []
         num_loans_over_time = []
+        total_size_loans = []
 
 
         # Calculate the total market value for each cycle and number of loans in each cycle
@@ -427,24 +427,26 @@ class loanMarket:
                 if loan.maturity_bool == False:
                     num_loans += 1
 
+            # calculating the total market value each cycle
             total_market_values.append(cycle_market_value)
             num_loans_over_time.append(num_loans)
 
-
-        # Calculate the total capital for each cycle
-        # Assuming all investors have a capital history for each cycle
-        for cycle in range(self.cycle):
+            # calculating the total capital for each cycle
             cycle_total_capital = sum(investor.capital_history[cycle] for investor in self.investors)
             total_capitals.append(cycle_total_capital)
 
-
-        # calculate the total portfolio value for each cycle
-        for cycle in range(self.cycle):
+            # calculating total portfolio value each cycle
             cycle_portfolio_value = sum(investor.portfolio_values[cycle] for investor in self.investors)
             total_portfolio_values.append(cycle_portfolio_value)
 
+            # calculating total size of loans
+            cycle_total_size_loans = sum(loan.size for loan in self.loans)
+            total_size_loans.append(cycle_total_size_loans)
+
+
+
         # Plotting
-        fig, axs = plt.subplots(4, 1, figsize=(12, 8))  # Create a figure and two subplots
+        fig, axs = plt.subplots(5, 1, figsize=(12, 8))  # Create a figure and two subplots
 
         # Plot number of loans over time
         axs[0].plot(num_loans_over_time)
@@ -469,6 +471,12 @@ class loanMarket:
         axs[3].set_title('Total Portfolio Value')
         axs[3].set_xlabel('Cycle')
         axs[3].set_ylabel('Value')
+
+        # Plot total size of loans
+        axs[4].plot(total_size_loans)
+        axs[4].set_title('Total Size of Loans')
+        axs[4].set_xlabel('Cycle')
+        axs[4].set_ylabel('Value')
 
         plt.tight_layout()
         plt.ticklabel_format(style='plain', axis='y')
@@ -531,7 +539,10 @@ class loanMarket:
         st.pyplot(fig)
 
 
-# creating sliders for the user to input the parameters
+# clearing the cache
+markettrial = None
+
+# creating sliders for the user to input the parameterr
 cycles = st.slider("Number of cycles", 0, 500, 200)
 last_issue_cycle = st.number_input("Last issue cycle", 0, cycles, cycles - 100)
 

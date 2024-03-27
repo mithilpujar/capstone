@@ -20,7 +20,7 @@ class LoanInvestorObj:
         self.capital_history = []
 
         # target score should be negatively correlated with capital
-        self.target_score = np.abs(np.random.normal(target_score_param, 0.1)) if self.capital < 10e8 else np.abs(np.random.normal(target_score_param*0.5, 0.05))
+        self.target_score = (np.abs(np.random.normal(target_score_param, 0.1))) if self.capital < 10e8 else np.abs(np.random.normal(target_score_param*0.5, 0.05))
         self.current_score = 0
         self.current_score_history = [self.current_score]
 
@@ -103,7 +103,7 @@ class LoanInvestorObj:
 
             self.current_score = normalized_score if normalized == True else raw_score
 
-    def receive_interest(self, float_interest):
+    def receive_interest_mature_loans(self, float_interest):
         """
         This is the procedure every cycle for the investor to receive interest on their loans.
         :param float_interest: The floating base rate for interest (think SOFR)
@@ -165,6 +165,12 @@ class LoanInvestorObj:
         if loan.maturity_bool:
             return 0
 
+        # ensuring the loan's reserve price doesn't exceed the capital of the investor, otherwise we bid the minimum
+        # if it does, then the investor will only bid until their minimum capital threshold
+        if (loan.size*(loan.reserve_price/100)) > self.capital:
+            bid_price = (self.capital * (1-self.min_capital_pct)) / loan.size
+            return bid_price
+
         # use portfolio neutral pricing for the bid price
         if pricing_method == 'portfolio_neutral':
             # takes a loan as an input and returns a bid price for the investor
@@ -189,12 +195,6 @@ class LoanInvestorObj:
 
             if bid_price < 0:
                 bid_price = 0
-
-
-        # ensuring the loan doesn't exceed the minimum capital for an investor
-        # if it does, then the investor will only bid until their minimum capital threshold
-        if (loan.size*(bid_price/100)) > self.capital:
-            bid_price = (self.capital * (1-self.min_capital_pct)) / loan.size
 
         return bid_price
 
@@ -221,12 +221,13 @@ class LoanInvestorObj:
         - float_interest (float, optional): The floating base rate for interest. Defaults to 0.
         - cycle (int, optional): The current cycle. Not currently used.
         """
+
         # adding in holders for loans to buy and capital change
         self.capital_change = 0
 
         self.current_cycle = cycle
 
-        self.receive_interest(float_interest)
+        self.receive_interest_mature_loans(float_interest)
 
         # removing matured loans from portfolio
         just_matured = [loan for loan in self.portfolio if loan.maturity_bool]
