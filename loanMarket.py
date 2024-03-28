@@ -24,7 +24,7 @@ class loanMarket:
         self.num_investors = st.number_input('Number of investors', min_value=1, max_value=1000, value=100, step=10)
         self.num_traders = st.number_input('Number of traders', min_value=1, max_value = self.num_investors, value=10, step=1)
         self.interest_rate = st.slider('Interest Rate', min_value=0.00, max_value=0.15, value=0.05, step=0.01)
-        self.broker_fee = st.slider('Broker Fee (bps)', min_value=0, max_value=100, value=15, step=1)/100
+        self.broker_fee_pct = st.slider('Broker Fee (bps)', min_value=0, max_value=500, value=15, step=1)/10000
         self.min_capital = st.slider('Minimum Capital Percent', min_value=0.01, max_value=0.30, value=0.05, step=0.01)
         self.default_rate = st.slider('Default Rate', min_value=1, max_value=300, value=100, step=10)
         self.reserve_price = st.slider('Reserve Price', min_value=0.01, max_value=1.0, value=0.8, step=0.01)
@@ -49,7 +49,7 @@ class loanMarket:
         self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=0.250) for _ in range(self.num_investors)]
 
         # creating the universe of traders
-        self.traders = [LoanTrader.LoanTraderObj(max_investors=self.num_investors // self.num_traders, broker_fee=self.broker_fee) for _ in
+        self.traders = [LoanTrader.LoanTraderObj(max_investors=self.num_investors // self.num_traders, broker_fee=self.broker_fee_pct) for _ in
                         range(self.num_traders)]
 
     def initialize(self):
@@ -206,10 +206,11 @@ class loanMarket:
         col2.metric(label='Interest Rate', value=self.interest_rate)
         col2.metric(label='Value of Defaulted Loans', value=round(np.mean([loan.fair_value_history[-1] for loan in self.loans if loan.defaulted]), 2))
 
-        col3.metric(label='Broker Fee', value=self.broker_fee)
+        col3.metric(label='Broker Fee Percent', value=self.broker_fee_pct * 100)
         col3.metric(label='Minimum Capital Percent', value=self.min_capital)
+        col3.metric(label = 'Number of Sales', value = sum([len(loan.sale_price_history) for loan in self.loans]))
 
-    def get_winners_losers_capital(self, plot_values=False):
+    def get_winners_losers_capital(self):
         # Calculate the winners and losers as the highest capital difference between beginning and end
         winners = []
         losers = []
@@ -614,7 +615,7 @@ if proceed:
     markettrial.print_parameter_values()
     markettrial.plot_portfolio_values()
     markettrial.plot_fair_values()
-    markettrial.get_winners_losers_capital(plot_values=True)
+    markettrial.get_winners_losers_capital()
     markettrial.get_winners_losers_portfolio_value()
     markettrial.plot_trader_revenue()
 

@@ -79,7 +79,7 @@ class LoanInvestorObj:
                 break
 
         self.capital -= total_investment
-        self.calculate_current_score()
+        self.calculate_current_score(normalized=True)
         self.loan_fair_values.append(np.sum([((loan.fair_value/100) * loan.size) for loan in self.portfolio]))
         self.portfolio_values.append(self.loan_fair_values[-1] + self.capital)
         self.capital_history.append(self.capital)
@@ -159,7 +159,7 @@ class LoanInvestorObj:
 
         return loan_to_sell
 
-    def get_bid_price(self, loan, pricing_method = 'portfolio_included'):
+    def get_bid_price(self, loan, pricing_method = 'portfolio_included', broker_fee = 0):
 
         # if the loan has matured, you can't bid on it
         if loan.maturity_bool:
@@ -192,6 +192,7 @@ class LoanInvestorObj:
             portfolio_size = sum([loan.size for loan in temp_portfolio])
             proj_interest = proj_interest / portfolio_size
             bid_price = proj_interest + 100 - ((loan.pd * loan.time_to_maturity) / self.target_score)
+            bid_price = bid_price * (1 - broker_fee)
 
             if bid_price < 0:
                 bid_price = 0

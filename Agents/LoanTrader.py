@@ -82,7 +82,7 @@ class LoanTraderObj:
             available_bidders = [investor for investor in self.investors if investor.id != loan.current_owner.id]
 
             for investor in available_bidders:
-                bid = investor.get_bid_price(loan)
+                bid = investor.get_bid_price(loan, broker_fee=self.broker_fee)
 
 
                 if bid > top_bidder['bid_price']:
@@ -105,7 +105,7 @@ class LoanTraderObj:
 
                 # updating the loan's owner
                 loan.sale_price_history.append(top_bidder['bid_price'])
-                broker_fee_amt = (self.broker_fee/100)*(top_bidder['bid_price']/100)*loan.size
+                broker_fee_amt = (self.broker_fee)*(top_bidder['bid_price']/100)*loan.size
                 self.cycle_broker_revenue += broker_fee_amt
 
                 top_bidder['investor'].buy_loan(loan, broker_fee_amt)
