@@ -208,8 +208,8 @@ class LoanInvestorObj:
 
 
         loan_to_purchase.update_owner(self)
-        self.capital -= loan_to_purchase.size * (loan_to_purchase.sale_price_history[-1] /100)
-        self.capital -= broker_fee
+        self.capital_change -= loan_to_purchase.size * (loan_to_purchase.sale_price_history[-1] /100)
+        self.capital_change -= broker_fee
 
 
 

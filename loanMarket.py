@@ -24,13 +24,19 @@ class loanMarket:
         self.num_investors = st.number_input('Number of investors', min_value=1, max_value=1000, value=100, step=10)
         self.num_traders = st.number_input('Number of traders', min_value=1, max_value = self.num_investors, value=10, step=1)
         self.interest_rate = st.slider('Interest Rate', min_value=0.00, max_value=0.15, value=0.05, step=0.01)
-        self.broker_fee = st.slider('Broker Fee', min_value=0.01, max_value=1.0, value=0.15, step=0.01)
+        self.broker_fee = st.slider('Broker Fee (bps)', min_value=0, max_value=100, value=15, step=1)/100
         self.min_capital = st.slider('Minimum Capital Percent', min_value=0.01, max_value=0.30, value=0.05, step=0.01)
         self.default_rate = st.slider('Default Rate', min_value=1, max_value=300, value=100, step=10)
         self.reserve_price = st.slider('Reserve Price', min_value=0.01, max_value=1.0, value=0.8, step=0.01)
         self.recovery_value = st.slider('Recovery Value', min_value=1, max_value=100, value=40, step=1)
         self.new_loans_slider = st.slider('Number of new loans', min_value=1, max_value=10, value=5, step=1)
 
+
+        # clearing cache
+        self.loans = None
+        self.new_loans = None
+        self.investors = None
+        self.traders = None
 
 
         # creating the universe of loans
@@ -40,7 +46,7 @@ class loanMarket:
         self.new_loans = [[Loan.LoanObj(float_interest=self.interest_rate, default_rate=301 - self.default_rate, reserve_price=self.reserve_price, recovery_value=self.recovery_value) for _ in range(int(self.new_loans_slider/100 * self.num_loans))] for _ in range(cycles)]
 
         # creating the universe of investors
-        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=1.162) for _ in range(self.num_investors)]
+        self.investors = [LoanInvestor.LoanInvestorObj(min_capital=self.min_capital, target_score_param=0.250) for _ in range(self.num_investors)]
 
         # creating the universe of traders
         self.traders = [LoanTrader.LoanTraderObj(max_investors=self.num_investors // self.num_traders, broker_fee=self.broker_fee) for _ in
@@ -511,22 +517,26 @@ class loanMarket:
         sizes = capital_sorted * size_factor
 
         # Creating the scatter plot with connected lines
-        fig, ax = plt.subplots(figsize=(12, 6))
+        fig, ax = plt.subplots(figsize=(12, 8))  # Adjust the figure size to create space for the text above
         for i in range(len(self.investors)):
             plt.plot([i, i], [current_scores_sorted[i], target_scores_sorted[i]], color='purple')  # lines
-        plt.scatter(range(num_investors), current_scores_sorted, s=sizes, color='blue', label='Current Score',
-                    zorder=5)
+        plt.scatter(range(num_investors), current_scores_sorted, s=sizes, color='blue', label='Current Score', zorder=5)
         plt.scatter(range(num_investors), target_scores_sorted, color='red', label='Target Score', zorder=5)
 
-        # Annotations for metrics
-        plt.text(0.02, 0.95, f'Number of investors above target score: {sum(current_scores > target_scores)}',
-                 transform=ax.transAxes)
-        plt.text(0.02, 0.90, f'Number of investors below target score: {sum(current_scores < target_scores)}',
-                 transform=ax.transAxes)
-        plt.text(0.02, 0.85, f'Total capital above target score: {total_capital_above_target:,.2f}',
-                 transform=ax.transAxes)
-        plt.text(0.02, 0.80, f'Total capital below target score: {total_capital_below_target:,.2f}',
-                 transform=ax.transAxes)
+        # Adjust the subplot parameters to make room for the text
+        plt.subplots_adjust(top=0.85)
+
+        # Plotting the annotations above the plot
+        y_texts = [0.95, 0.92, 0.89, 0.86]  # Adjust these positions as needed
+        texts = [
+            f'Number of investors above target score: {sum(current_scores > target_scores)}',
+            f'Number of investors below target score: {sum(current_scores < target_scores)}',
+            f'Total capital above target score: {total_capital_above_target:,.2f}',
+            f'Total capital below target score: {total_capital_below_target:,.2f}'
+        ]
+        for y, text in zip(y_texts, texts):
+            fig.text(0.02, y, text, bbox=dict(facecolor='white', edgecolor='none', alpha=0.8),
+                     transform=fig.transFigure)
 
         plt.ylabel("Score")
         plt.xlabel("Investor")
@@ -534,8 +544,8 @@ class loanMarket:
         plt.legend()
         plt.grid(True)
         plt.show()
-        plt.figure()
 
+        # If you're using Streamlit, uncomment the following line to display the plot
         st.pyplot(fig)
 
 
