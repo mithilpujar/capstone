@@ -64,7 +64,7 @@ class LoanTraderObj:
             print('Investors with loans listed: ', [loan.current_owner.id[:5] for loan in self.loans_for_sale])
             print('Loans for sale: ', [loan.id[:5] for loan in self.loans_for_sale])
 
-    def run_auction(self):
+    def run_auction(self, show_bids = False):
 
         # quick escape if there are no loans in the for sale book
         if self.loans_for_sale == []:
@@ -111,6 +111,8 @@ class LoanTraderObj:
                 top_bidder['investor'].buy_loan(loan, broker_fee_amt)
 
                 self.num_sales += 1
+
+
 
     def receive_interest_payments(self):
         total_interest = 0
