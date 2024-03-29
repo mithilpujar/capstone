@@ -112,7 +112,14 @@ class LoanTraderObj:
 
                 self.num_sales += 1
 
-
+        # adding demonstrator print statements
+        if show_bids:
+            print("Purchased: ", purchased)
+            print('Top bidder is {} with bid price {} for ${}'.format(top_bidder['investor'].id[:5],
+                                                                      top_bidder['bid_price'],
+                                                                      top_bidder['bid_price'] / 100 * loan.size))
+            print("Loan Ownership History: ", loan.ownership_history)
+            # print("\n Top Bidder Attributes: ", vars(top_bidder['investor']))
 
     def receive_interest_payments(self):
         total_interest = 0
